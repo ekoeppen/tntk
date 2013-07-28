@@ -8,13 +8,13 @@ class TPackage
 {
 public:
     int                         fPackageDataLen;
-    char*                       fPackageData;
+    unsigned char*              fPackageData;
 
     char*                       fPackageName;
     char*                       fOutputFileName;
     char*                       fPlatformFileName;
     char*                       fProjectFileName;
-    
+
     TPart**                     fParts;
     int                         fNumParts;
 
@@ -29,8 +29,6 @@ protected:
     void                        MReadProjectFile ();
     newtRef                     MInterpretFile (const char* fileName);
 
-    int                         MDCLPartType (TPartType type);
-    
 };
 
 #endif

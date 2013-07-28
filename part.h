@@ -16,10 +16,8 @@ enum TPartType
 class TPart
 {
 public:
-    int                         fDataLen;
-    unsigned char*                       fData;
     TPartType                   fType;
-    
+
     char*                       fMainFile;
     char**                      fFiles;
     int                         fNumFiles;
