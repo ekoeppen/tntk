@@ -23,7 +23,7 @@ INSTALLATION
 USAGE
 -----
 
+* [Fun with NEWT/0](http://40hz.org/Pages/Mottek:%202010-11-23)
 * [Autoparts with tntk](http://40hz.org/Pages/Mottek:%202011-01-09)
 * [Developing Newton apps with Einstein, TextMate and tntk](http://40hz.org/Pages/Mottek:%202011-01-16)
-* [Fun with NEWT/0](http://40hz.org/Pages/Mottek:%202010-11-23)
 
