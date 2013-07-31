@@ -3,7 +3,6 @@ project (tntk)
 add_definitions (-DTARGET_OS_POSIX -DHAS_C99_LONGLONG -DTARGET_RT_BIG_ENDIAN=1 -DTARGET_RT_LITTLE_ENDIAN=0)
 include_directories (/usr/local/include/cDCL /usr/local/include/newt0)
 
-
 add_executable (tntk
 package.cpp
 part.cpp
@@ -11,6 +10,8 @@ preferences.cpp
 tntk.cpp
 )
 
+set(CMAKE_OSX_ARCHITECTURES "i386")
+set_target_properties(tntk PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 target_link_libraries (tntk cdcl newt dl pthread stdc++)
 
 INSTALL(TARGETS tntk
