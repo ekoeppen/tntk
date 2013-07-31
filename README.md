@@ -27,3 +27,4 @@ USAGE
 * [Autoparts with tntk](http://40hz.org/Pages/Mottek:%202011-01-09)
 * [Developing Newton apps with Einstein, TextMate and tntk](http://40hz.org/Pages/Mottek:%202011-01-16)
 
+You will also need the [NTK Platform Files](http://www.unna.org/view.php?/apple/development/NTK/platformfiles).
