@@ -80,6 +80,7 @@ newtRef TPart::MInterpretFile (const char *f)
 	newtRefVar constants;
 	newtErr err;
 	newtRefVar map, s, v;
+	newtRefVar theBase = kNewtRefNIL;
 	int i;
 
 	printf ("Compiling %s\n", f);
@@ -99,6 +100,14 @@ newtRef TPart::MInterpretFile (const char *f)
 	fn = NBCGenBC (stree, numStree, true);
 	NBCCleanup ();
 	fn = NVMCall (fn, 0, &err);
+	theBase = NcGetGlobalVar(NSSYM(theBase));
+	newtObjRef obj = NewtRefToPointer(theBase);
+	uint32_t index, len = NewtObjSlotsLength(obj);
+	for (i=len-1; i>2; i--) {
+	    newtRefVar slot = NewtGetMapIndex(obj->as.map, i, &index);
+	    // printf("Slot %d = <%s>\n", i, NewtRefToSymbol(slot)->name);
+	    NcRemoveSlot(theBase, slot);
+	}
 	NPSCleanup ();
 	return fn;
 }

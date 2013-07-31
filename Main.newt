@@ -86,6 +86,9 @@ mainView := {
     viewBounds: {left: 16, top: 16, right: -16, bottom: -16},
 };
 
+dtkHelperFunc := func() begin end;
+DefGlobalVar('theBase, dtkHelperFunc.argFrame._nextArgFrame);
+
 {
     app: kAppSymbol,
     text: kAppTitle,
