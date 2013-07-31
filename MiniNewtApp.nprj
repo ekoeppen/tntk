@@ -1,0 +1,10 @@
+{
+	parts: [
+	{
+		main: "Main.newt",
+		files: [],
+	}
+	],
+		name: "MiniNewtApp:40hz",
+		platform: "/Applications/Newton/NTK 1.6.4/Platforms/Newton 2.1"
+}

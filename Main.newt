@@ -1,0 +1,106 @@
+kAppSymbol := '|MiniNewtApp:40Hz|;
+kAppTitle := "MiniNewtApp";
+kVersion := "1.0";
+
+defaultLayout := {
+    _proto: newtLayout,
+    masterSoupSlot: 'MiniNewtAppSoup,
+    name: "Default",
+
+    viewJustify: vjParentFullH + vjParentFullV,
+    viewBounds: {left: 0, top: 20, right: 0, bottom: -25},
+
+    stepChildren: [
+        {
+            _proto: newtEntryView,
+
+            viewJustify: vjParentFullH + vjParentFullV,
+            viewBounds: {left: 0, top: 0, right: 0, bottom: 0},
+
+            stepChildren: [
+                {
+                    _proto: newtLabelInputLine,
+                    path: 'title,
+                    label: "Title",
+                    labelFont: ROM_fontSystem10Bold,
+                    viewJustify: vjParentFullH + vjParentTopV,
+                    viewBounds: {left: 0, top: 4, right: -8, bottom: 32},
+                },
+            ]
+        }
+    ]
+};
+
+overviewLayout := {
+    _proto: newtOverLayout,
+    masterSoupSlot: 'MiniNewtAppSoup,
+    name: "Overview",
+
+    viewJustify: vjParentFullH + vjParentFullV,
+    viewBounds: {left: 0, top: 20, right: 0, bottom: -25},
+
+    Abstract: func(target, bbox) begin
+        return MakeText(target.title, bbox.left + 2, bbox.top, bbox.right, bbox.bottom - 18);
+    end
+};
+
+mainView := {
+    _proto: newtApplication,
+    title: kAppTitle,
+    appSymbol: kAppSymbol,
+    appObject: ["Task", "Tasks"],
+    appAll: "All Tasks",
+    allLayouts: {
+        default: defaultLayout,
+        overview: overviewLayout
+    },
+    aboutInfo: {
+        tagLine: "MiniNewtApp - a NewtApp demo",
+        copyright: "(c) Eckhart Koeppen, all rights reserved",
+        version: kVersion
+    },
+    allSoups: {
+        miniNewtAppSoup: {
+            _proto: newtSoup,
+            soupName: "MiniNewtApp",
+            soupIndices: [],
+            soupQuery: {},
+
+            CreateBlankEntry: func() begin
+                return Clone({title: "Title"});
+            end
+        }
+    },
+    stepChildren: [
+        {
+            _proto: newtClockFolderTab
+        },
+        {
+            _proto: newtStatusBar,
+            menuLeftButtons: [newtInfoButton],
+            menuRightButtons: [newtActionButton, newtFilingButton, newtCheckAllButton]
+        },
+    ],
+
+    viewJustify: vjParentFullH + vjParentFullV,
+    viewBounds: {left: 16, top: 16, right: -16, bottom: -16},
+};
+
+{
+    app: kAppSymbol,
+    text: kAppTitle,
+    theForm: mainView,
+
+    devInstallScript: func (partFrame) begin
+        partFrame.removeFrame := partFrame.theForm:NewtInstallScript(partFrame.theForm);
+    end,
+    RemoveScript: func(partFrame) begin
+        partFrame.removeFrame:NewtRemoveScript(removeFrame);
+    end,
+
+    InstallScript: func (partFrame) begin
+        partFrame:?devInstallScript(partFrame);
+        if HasSlot(partFrame, 'devInstallScript) then RemoveSlot(partFrame, 'devInstallScript);
+        partFrame.InstallScript := nil;
+    end,
+}
