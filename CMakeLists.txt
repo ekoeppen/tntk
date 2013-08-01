@@ -12,7 +12,8 @@ tntk.cpp
 
 set(CMAKE_OSX_ARCHITECTURES "i386")
 set_target_properties(tntk PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
-target_link_libraries (tntk cdcl newt dl pthread stdc++)
+find_library(ICONV_LIBRARY NAMES iconv libiconv libiconv-2 c)
+target_link_libraries (tntk cdcl newt dl pthread stdc++ ${ICONV_LIBRARY})
 
 INSTALL(TARGETS tntk
 	RUNTIME DESTINATION bin)
