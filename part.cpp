@@ -21,6 +21,7 @@
 // ANSI C & POSIX
 #include <libgen.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
@@ -80,10 +81,19 @@ newtRef TPart::MInterpretFile (const char *f)
 	newtRefVar constants;
 	newtErr err;
 	newtRefVar map, s, v;
+	char *script;
 	int i;
+	int file;
+	struct stat st;
 
 	printf ("Compiling %s\n", f);
-	err = NPSParseFile (f, &stree, &numStree);
+	file = open(f, O_RDONLY);
+	fstat (file, &st);
+	script = (char *) malloc (st.st_size);
+	read (file, script, st.st_size);
+	close (file);
+
+	err = NPSParseStr (script, &stree, &numStree);
 
 	NBCInit ();
 	constants = NBCConstantTable ();
