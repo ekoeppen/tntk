@@ -40,6 +40,8 @@
 
 #include "part.h"
 
+const char *helper = " __tntk := func() begin end;\nDefGlobalVar('theBase, __tntk.argFrame._nextArgFrame);\n";
+
 TPart::TPart (newtRefVar partInfo):
 	fType (kForm),
 	fConstants (kNewtRefNIL),
@@ -77,25 +79,33 @@ newtRef TPart::MInterpretFile (const char *f)
 {
 	nps_syntax_node_t *stree = NULL;
 	uint32_t numStree = 0;
+	uint32_t index, len;
 	newtRefVar fn = kNewtRefNIL;
 	newtRefVar constants;
 	newtErr err;
 	newtRefVar map, s, v;
 	char *script;
-	newtRefVar theBase = kNewtRefNIL;
+	newtRefVar base = kNewtRefNIL;
+	newtObjRef obj;
 	int i;
 	int file;
 	struct stat st;
 
 	printf ("Compiling %s\n", f);
+
+	/* Read the script into a string and prepend it with the helper
+	 * function which exposes the local variable frame */
 	file = open(f, O_RDONLY);
 	fstat (file, &st);
-	script = (char *) malloc (st.st_size);
-	read (file, script, st.st_size);
+	script = (char *) malloc (st.st_size + strlen (helper) + 1);
+	memset (script, 0, st.st_size + strlen (helper) + 1);
+	strcpy (script, helper);
+	read (file, script + strlen(helper), st.st_size);
 	close (file);
 
 	err = NPSParseStr (script, &stree, &numStree);
 
+	/* Add constants from the platform file */
 	NBCInit ();
 	constants = NBCConstantTable ();
 	if (fConstants != kNewtRefNIL) {
@@ -107,16 +117,19 @@ newtRef TPart::MInterpretFile (const char *f)
 		}
 	}
 
+	/* The script will generate a function, which is called here, and
+	 * which will return the last frame in the script */
 	fn = NBCGenBC (stree, numStree, true);
 	NBCCleanup ();
 	fn = NVMCall (fn, 0, &err);
-	theBase = NcGetGlobalVar(NSSYM(theBase));
-	newtObjRef obj = NewtRefToPointer(theBase);
-	uint32_t index, len = NewtObjSlotsLength(obj);
-	for (i=len-1; i>2; i--) {
-	    newtRefVar slot = NewtGetMapIndex(obj->as.map, i, &index);
-	    // printf("Slot %d = <%s>\n", i, NewtRefToSymbol(slot)->name);
-	    NcRemoveSlot(theBase, slot);
+
+	/* Remove the local variables of the called function to avoid inifite
+	 * recursion when writing the package */
+	base = NcGetGlobalVar (NSSYM (theBase));
+	obj = NewtRefToPointer (base);
+	for (i = NewtObjSlotsLength (obj) - 1; i > 2; i--) {
+	    newtRefVar slot = NewtGetMapIndex (obj->as.map, i, &index);
+	    NcRemoveSlot(base, slot);
 	}
 	NPSCleanup ();
 	return fn;
