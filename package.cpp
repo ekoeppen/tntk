@@ -18,8 +18,6 @@
 //
 // ***** END LICENSE BLOCK *****
 
-#include <DCL/Headers/DCLDefinitions.h>
-
 // ANSI C & POSIX
 #include <libgen.h>
 #include <stdio.h>
@@ -31,23 +29,6 @@
 // ISO C++
 #include <stdexcept>
 
-// DCL
-#include <DCL/Exceptions/TDCLException.h>
-#include <DCL/Exceptions/Errors/TDCLMemError.h>
-#include <DCL/Exceptions/IO_Exceptions/TDCLDoesntExistException.h>
-#include <DCL/Interfaces/POSIX/TDCLPOSIXFile.h>
-#include <DCL/Interfaces/POSIX/TDCLPOSIXFiles.h>
-#include <DCL/NS_Objects/Exchange/TDCLNSOFDecoder.h>
-#include <DCL/NS_Objects/Objects/TDCLNSArray.h>
-#include <DCL/NS_Objects/Objects/TDCLNSBinary.h>
-#include <DCL/NS_Objects/Objects/TDCLNSFrame.h>
-#include <DCL/NS_Objects/Objects/TDCLNSRef.h>
-#include <DCL/Package/TDCLPackage.h>
-#include <DCL/Package/TDCLPkgNOSPart.h>
-#include <DCL/Streams/TDCLStdStream.h>
-#include <DCL/Streams/TDCLStream.h>
-#include <DCL/Streams/TDCLMemStream.h>
-
 // NEWT/0
 #include <NewtCore.h>
 #include <NewtVM.h>
@@ -55,6 +36,8 @@
 #include <NewtNSOF.h>
 #include <NewtBC.h>
 #include <NewtGC.h>
+#include <NewtPkg.h>
+#include <NewtPrint.h>
 
 #include "package.h"
 #include "part.h"
@@ -125,36 +108,42 @@ newtRef TPackage::MInterpretFile (const char *f)
 
 void TPackage::MBuildPackage ()
 {
-    TDCLPackage package;
-    TDCLMemStream output;
     int i;
+    newtRef part;
+    newtRef parts;
+    newtRef package;
+    newtRefVar packageData;
 
     NVMInit ();
     MReadProjectFile ();
     printf ("Building package %s\n", fPackageName);
-    package.SetNOS1Compatible (false);
-    package.SetPackageID (TDCLPackage::kDefaultID);
-    package.SetPackageFlags (0);
-    package.SetPackageVersion (1);
-    package.SetPackageName (fPackageName);
-    package.SetCopyrightString (kPackageCopyrightString);
 
     for (i = 0; i < fNumParts; i++) {
         printf ("Building part %i\n", i);
         fParts[i]->MBuildPart (fPlatformFileName);
-        TDCLMemStream formStream (fParts[i]->fData, fParts[i]->fDataLen);
-        TDCLNSOFDecoder decoder (&formStream);
-        TDCLNSRef form = decoder.GetNextObject ();
-        package.AddPart (MDCLPartType (fParts[i]->fType),
-            TDCLPackage::kPartNOSPart | TDCLPackage::kPartNotifyFlag,
-            new TDCLPkgNOSPart (form));
     }
-
-    package.WriteToStream (&output);
-
-    fPackageDataLen = output.GetBufferSize ();
-    fPackageData = (char*) malloc (fPackageDataLen);
-    memcpy (fPackageData, output.GetBuffer (), fPackageDataLen);
+    parts = NewtMakeArray(kNewtRefNIL, fNumParts);
+    for (i = 0; i < fNumParts; i++) {
+        part = NcMakeFrame();
+        NcSetSlot(part, NSSYM(class), NSSYM(PackagePart));
+        NcSetSlot(part, NSSYM(info), NewtMakeBinary(NSSYM(binary), (uint8_t*)"A Newton Toolkit application", /*28*/24, false));
+        NcSetSlot(part, NSSYM(flags), NewtMakeInt30(129));
+        NcSetSlot(part, NSSYM(type), NewtMakeInt32('form'));
+        NcSetSlot(part, NSSYM(data), fParts[i]->fMainForm);
+        NewtSetArraySlot(parts, i, part);
+    }
+    package = NcMakeFrame();
+    NcSetSlot(package, NSSYM(class), NSSYM(PackageHeader));
+    NcSetSlot(package, NSSYM(type), NewtMakeInt32('xxxx'));
+    NcSetSlot(package, NSSYM(pkg_version), NewtMakeInt32(0));
+    NcSetSlot(package, NSSYM(version), NewtMakeInt32(1));
+    NcSetSlot(package, NSSYM(copyright), NewtMakeString("Eckhart Koeppen", false));
+    NcSetSlot(package, NSSYM(name), NewtMakeString(fPackageName, false));
+    NcSetSlot(package, NSSYM(flags), NewtMakeInt32(0x10000000));
+    NcSetSlot(package, NSSYM(parts), parts);
+    packageData = NsMakePkg(kNewtRefNIL, package);
+    fPackageDataLen = NewtBinaryLength(packageData);
+    fPackageData = NewtRefToBinary(packageData);
 
     NVMClean ();
 }
@@ -194,33 +183,4 @@ void TPackage::MSavePackage ()
     f = fopen (fOutputFileName, "wb+");
     fwrite (fPackageData, fPackageDataLen, 1, f);
     fclose (f);
-}
-
-int TPackage::MDCLPartType (TPartType type)
-{
-    int r;
-    
-    switch (type) {
-        case kForm:
-            r = TDCLPackage::kFormPart;
-            break;
-        case kAuto:
-            r = TDCLPackage::kAutoPart;
-            break;
-        case kFont:
-            r = TDCLPackage::kFontPart;
-            break;
-        case kBook:
-            r = TDCLPackage::kBookPart;
-            break;
-        case kDict:
-            r = TDCLPackage::kDictPart;
-            break;
-        case kStore:
-            r = TDCLPackage::kStorePart;
-            break;
-        default:
-            r = TDCLPackage::kFormPart;
-    }
-    return r;
 }

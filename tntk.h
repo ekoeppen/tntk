@@ -5,23 +5,36 @@
 #include <stdio.h>
 
 // DCL
+#ifdef HAVE_CDCL
 #include <DCL/Interfaces/Common/TDCLLogApplication.h>
 #include <DCL/Interfaces/POSIX/TDCLPOSIXFiles.h>
 #include <DCL/Interfaces/POSIX/TDCLPThreads.h>
 #include <DCL/Interfaces/IDCLThreads.h>
 #include <DCL/Server/TDCLSimpleServer.h>
 #include <DCL/Link/TDCLInspectorLink.h>
+#endif
 
 class TPackage;
 class TPreferences;
 
-class TTntk: public TDCLLogApplication
+class TTntkBase
 {
 public:
-    IDCLThreads::ISemaphore*    fConnected;
-    bool                        fDisconnect;
     TPackage*                   fPackage;
     TPreferences*               fPreferences;
+
+                                TTntkBase (int argc, char* argv[]);
+    virtual                     ~TTntkBase ();
+
+    virtual void                MRun ();
+};
+
+#ifdef HAVE_CDCL
+class TTntk: public TDCLLogApplication, public TTntkBase
+{
+public
+    bool                        fDisconnect;
+    IDCLThreads::ISemaphore*    fConnected;
 
                                 TTntk (int argc, char* argv[]);
                                 ~TTntk ();
@@ -37,5 +50,6 @@ public:
     IDCLFiles*                  CreateFilesIntf ();
     IDCLThreads*                CreateThreadsIntf ();
 };
+#endif
 
 #endif
