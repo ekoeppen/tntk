@@ -78,7 +78,7 @@ mainView := {
         {
             _proto: newtStatusBar,
             menuLeftButtons: [newtInfoButton],
-            menuRightButtons: [newtActionButton, newtFilingButton, newtCheckAllButton]
+            menuRightButtons: [newtActionButton, newtFilingButton]
         },
     ],
 
