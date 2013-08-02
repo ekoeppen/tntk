@@ -56,7 +56,7 @@ void TTntkBase::MRun ()
 #ifdef HAVE_CDCL
 TTntk::TTntk (int argc, char* argv[]):
     TTntkBase (argc, argv),
-    TDCLLoggingApplication (NULL),
+    TDCLLogApplication (NULL),
     fDisconnect (false),
     fConnected (NULL)
 {

@@ -32,7 +32,7 @@ public:
 #ifdef HAVE_CDCL
 class TTntk: public TDCLLogApplication, public TTntkBase
 {
-public
+public:
     bool                        fDisconnect;
     IDCLThreads::ISemaphore*    fConnected;
 
