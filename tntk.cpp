@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <strings.h>
 #ifdef HAVE_LIBREADLINE
 #include <readline/readline.h>
 #endif
@@ -121,7 +122,7 @@ void TTntk::MRun ()
 void TTntk::MCompileString (char *s, void**out, int* outlen)
 {
     newtRefVar fn = NBCCompileStr(s, true);
-    newtRefVar nsof = NsMakeNSOF (0, fn, NewtMakeInt30 (2));  
+    newtRefVar nsof = NsMakeNSOF (0, fn, NewtMakeInt30 (2));
     newtObjRef obj = NewtRefToPointer (nsof);
     *out = NewtObjData (obj);
     *outlen = NewtObjSize (obj);
@@ -180,7 +181,8 @@ void TTntk::MCommandLoop (TDCLServer *server, TDCLLink *link)
 #else
         putchar ('>'); putchar (' ');
         command = (char *) malloc (FILENAME_MAX);
-        fgets (command, sizeof (command), stdin);
+        memset (command, 0, FILENAME_MAX);
+        fgets (command, FILENAME_MAX, stdin);
 #endif
         for (s = command; *s <= ' ' && *s != 0; s++);
         if (*s == ':') {
@@ -206,7 +208,7 @@ extern "C" void yyerror(char * s)
 int main (int argc, char *argv[])
 {
     TTntkBase* app;
-    
+
 #ifdef HAVE_CDCL
     app = new TTntk (argc, argv);
 #else
