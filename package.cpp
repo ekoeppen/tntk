@@ -128,7 +128,7 @@ void TPackage::MBuildPackage ()
         NcSetSlot(part, NSSYM(class), NSSYM(PackagePart));
         NcSetSlot(part, NSSYM(info), NewtMakeBinary(NSSYM(binary), (uint8_t*)"A Newton Toolkit application", /*28*/24, false));
         NcSetSlot(part, NSSYM(flags), NewtMakeInt30(129));
-        NcSetSlot(part, NSSYM(type), NewtMakeInt32('form'));
+        NcSetSlot(part, NSSYM(type), NewtMakeInt32(fParts[i]->fType));
         NcSetSlot(part, NSSYM(data), fParts[i]->fMainForm);
         NewtSetArraySlot(parts, i, part);
     }
