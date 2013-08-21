@@ -28,6 +28,7 @@ USAGE
 
     tntk [options] file
       -c    compile-only
+      -d    dump contents of a .pkg file
       -l    log file name
       -p    serial port device path
       -P    platform files search path
