@@ -184,3 +184,22 @@ void TPackage::MSavePackage ()
     fwrite (fPackageData, fPackageDataLen, 1, f);
     fclose (f);
 }
+
+void TPackage::MDumpPackage ()
+{
+    FILE *f;
+    struct stat st;
+    newtRef r;
+
+    NVMInit ();
+    NcSetGlobalVar (NSSYM0 (printDepth), NewtMakeInt32(9999));
+    NcSetGlobalVar (NSSYM0 (printLength), NewtMakeInt32(9999));
+    stat (fProjectFileName, &st);
+    f = fopen (fProjectFileName, "rb");
+    fPackageDataLen = st.st_size;
+    fPackageData = (unsigned char *) malloc (fPackageDataLen);
+    fread (fPackageData, fPackageDataLen, 1, f);
+    r = NewtReadPkg (fPackageData, fPackageDataLen);
+    NewtPrintObj (stdout, r);
+    fclose (f);
+}

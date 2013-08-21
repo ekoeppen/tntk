@@ -19,6 +19,7 @@ public:
     char*                       fLogFileName;
     char*                       fProjectFileName;
     bool                        fCompileOnly;
+    bool                        fDumpPackage;
     
                                 TPreferences ();
                                 ~TPreferences ();

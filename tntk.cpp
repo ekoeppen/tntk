@@ -48,9 +48,13 @@ TTntkBase::~TTntkBase ()
 
 void TTntkBase::MRun ()
 {
-    fPackage->MBuildPackage ();
-    fPackage->MSavePackage ();
-    printf ("Package %s created.\n", fPackage->fOutputFileName);
+    if (fPreferences->fCompileOnly) {
+        fPackage->MBuildPackage ();
+        fPackage->MSavePackage ();
+        printf ("Package %s created.\n", fPackage->fOutputFileName);
+    } else if (fPreferences->fDumpPackage) {
+        fPackage->MDumpPackage ();
+    }
 }
 
 #ifdef HAVE_CDCL
@@ -95,7 +99,7 @@ void TTntk::Disconnected (TDCLLink* aLink)
 
 void TTntk::MRun ()
 {
-    if (fPreferences->fCompileOnly) {
+    if (fPreferences->fCompileOnly || fPreferences->fDumpPackage) {
         TTntkBase::MRun();
     } else {
         TDCLSimpleServer* server;

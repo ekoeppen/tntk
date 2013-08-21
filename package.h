@@ -23,6 +23,7 @@ public:
 
     void                        MBuildPackage ();
     void                        MSavePackage ();
+    void                        MDumpPackage ();
 
 protected:
     void                        MReset ();
