@@ -1,4 +1,4 @@
-#ifndef __TTNKT_H
+#ifndef __TTNTK_H
 #define __TTNTK_H
 
 // POSIX
