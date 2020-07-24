@@ -40,13 +40,14 @@
 
 #include "part.h"
 
-const char *helper = " __tntk := func() begin end;\nDefGlobalVar('theBase, __tntk.argFrame._nextArgFrame);\n";
+const char *helper = " __tntk := func() begin end;\nDefGlobalVar('theBase, __tntk.argFrame);\n";
 
 TPart::TPart (newtRefVar partInfo):
     fType (kForm),
     fConstants (kNewtRefNIL),
     fGlobalFunctions (kNewtRefNIL),
     fFiles (NULL),
+    fNativeModules (NULL),
     fNumFiles (0)
 {
     newtRefVar files, map;
@@ -54,11 +55,19 @@ TPart::TPart (newtRefVar partInfo):
 
     fMainFile = strdup (NewtRefToString (NcGetSlot (partInfo, NewtMakeSymbol ("main"))));
     files = NcGetSlot (partInfo, NewtMakeSymbol ("files"));
-    if (files != kNewtRefNIL) {
+    if (files != kNewtRefUnbind) {
         fNumFiles = NewtArrayLength (files);
         fFiles = (char **) malloc (fNumFiles * sizeof (char *));
         for (i = 0; i < fNumFiles; i++) {
             fFiles[i] = strdup (NewtRefToString (NewtGetArraySlot (files, i)));
+        }
+    }
+    files = NcGetSlot (partInfo, NewtMakeSymbol ("modules"));
+    if (files != kNewtRefUnbind) {
+        fNumNativeModules = NewtArrayLength (files);
+        fNativeModules = (char **) malloc (fNumNativeModules * sizeof (char *));
+        for (i = 0; i < fNumNativeModules; i++) {
+            fNativeModules[i] = strdup (NewtRefToString (NewtGetArraySlot (files, i)));
         }
     }
     if (NcGetSlot (partInfo, NewtMakeSymbol ("type")) == NewtMakeSymbol ("auto")) {
@@ -71,15 +80,42 @@ TPart::~TPart ()
     while (fNumFiles-- > 0) {
         delete fFiles[fNumFiles];
     }
+    while (fNumNativeModules-- > 0) {
+        delete fNativeModules[fNumNativeModules];
+    }
     delete fFiles;
+    delete fNativeModules;
     delete fMainFile;
+}
+
+newtRef TPart::MLoadNativeModule (const char *f)
+{
+    int file;
+    struct stat st;
+    uint8_t *data;
+    newtRef binary, name, code, entryPoints, relocations;
+
+    printf ("Reading module %s\n", f);
+    file = open(f, O_RDONLY);
+    fstat (file, &st);
+    data = (uint8_t *) malloc (st.st_size);
+    read (file, data, st.st_size);
+    binary = NewtReadNSOF (data, st.st_size);
+    name = NcGetSlot (binary, NewtMakeSymbol ("name"));
+    code = NcGetSlot (binary, NewtMakeSymbol ("code"));
+    entryPoints = NcGetSlot (binary, NewtMakeSymbol ("entryPoints"));
+    relocations = NcGetSlot (binary, NewtMakeSymbol ("relocations"));
+    NcSetGlobalVar (name,  binary);
+    close (file);
+    free (data);
+    return binary;
 }
 
 newtRef TPart::MInterpretFile (const char *f)
 {
     nps_syntax_node_t *stree = NULL;
     uint32_t numStree = 0;
-    uint32_t index, len;
+    uint32_t len;
     newtRefVar fn = kNewtRefNIL;
     newtRefVar constants;
     newtErr err;
@@ -127,10 +163,13 @@ newtRef TPart::MInterpretFile (const char *f)
      * recursion when writing the package */
     base = NcGetGlobalVar (NSSYM (theBase));
     obj = NewtRefToPointer (base);
+    /*
     for (i = NewtObjSlotsLength (obj) - 1; i > 2; i--) {
+        size_t index;
         newtRefVar slot = NewtGetMapIndex (obj->as.map, i, &index);
         NcRemoveSlot(base, slot);
     }
+    */
     NPSCleanup ();
     return fn;
 }
@@ -167,6 +206,9 @@ void TPart::MBuildPart (const char *platformFileName)
     int i;
 
     NVMInit ();
+    for (i = 0; i < fNumNativeModules; i++) {
+        MLoadNativeModule (fNativeModules[i]);
+    }
     for (i = 0; i < fNumFiles; i++) {
         MReadPlatformFile (platformFileName);
         MInterpretFile (fFiles[i]);

@@ -21,6 +21,8 @@ public:
     char*                       fMainFile;
     char**                      fFiles;
     int                         fNumFiles;
+    char**                      fNativeModules;
+    int                         fNumNativeModules;
 
     newtRefVar                  fMainForm;
     newtRefVar                  fConstants;
@@ -34,6 +36,7 @@ public:
 
 protected:
     newtRef                     MInterpretFile (const char* fileName);
+    newtRef                     MLoadNativeModule (const char* fileName);
     void                        MReadPlatformFile (const char* platformFileName);
 };
 

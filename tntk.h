@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 // DCL
-#ifdef HAVE_CDCL
+#ifdef HAVE_DCL
 #include <DCL/Interfaces/Common/TDCLLogApplication.h>
 #include <DCL/Interfaces/POSIX/TDCLPOSIXFiles.h>
 #include <DCL/Interfaces/POSIX/TDCLPThreads.h>
@@ -29,7 +29,7 @@ public:
     virtual void                MRun ();
 };
 
-#ifdef HAVE_CDCL
+#ifdef HAVE_DCL
 class TTntk: public TDCLLogApplication, public TTntkBase
 {
 public:

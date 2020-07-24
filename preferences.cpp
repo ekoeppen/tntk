@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include "preferences.h"
 
-static const char kOptions[] = "p:s:t:P:l:c:d";
+static const char kOptions[] = "p:s:t:P:l:cd";
 static const char kRcFile[] = ".tntkrc";
 static const char kDefaultPort[] = "/dev/ttyS0";
 static const char kDefaultLogFileName[] = "/dev/null";
@@ -98,6 +98,7 @@ void TPreferences::MInitPreferences (int argc, char *argv[])
                 break;
             case 'd':
                 fDumpPackage = true;
+                break;
         }
     }
     if (optind < argc) {

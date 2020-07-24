@@ -4,7 +4,7 @@
 #include <readline/readline.h>
 #endif
 
-#ifdef HAVE_CDCL
+#ifdef HAVE_DCL
 #include <DCL/Communication_Layers/POSIX/TDCLFDSerialPort.h>
 #include <DCL/Communication_Layers/TDCLSyncCommLayer.h>
 #include <DCL/Link/TDCLFullDockLink.h>
@@ -58,7 +58,7 @@ void TTntkBase::MRun ()
     }
 }
 
-#ifdef HAVE_CDCL
+#ifdef HAVE_DCL
 TTntk::TTntk (int argc, char* argv[]):
     TTntkBase (argc, argv),
     TDCLLogApplication (NULL),
@@ -213,7 +213,7 @@ int main (int argc, char *argv[])
 {
     TTntkBase* app;
 
-#ifdef HAVE_CDCL
+#ifdef HAVE_DCL
     app = new TTntk (argc, argv);
 #else
     app = new TTntkBase (argc, argv);
