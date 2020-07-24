@@ -1,0 +1,10 @@
+{
+    parts: [
+        {
+            main: "hello.newt",
+            modules: ["hello.ntkc"],
+        }
+    ],
+    name: "Hello:40hz",
+    platform: "Newton 2.1"
+}

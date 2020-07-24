@@ -1,0 +1,7 @@
+hello_1.0 {
+  global:
+    Hello;
+
+  local:
+    *;
+};
