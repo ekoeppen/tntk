@@ -7,7 +7,7 @@ PREREQUISITES
 -------------
 
 * [CMake](http://www.cmake.org/cmake/resources/software.html)
-* [NEWT/0](http://gnue.github.io/NEWT0/)
+* [NEWT/0](https://github.com/ekoeppen/NEWT0)
 * [cDCL](http://github.com/ekoeppen/cDCL)
 
 

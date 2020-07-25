@@ -48,7 +48,8 @@ TPart::TPart (newtRefVar partInfo):
     fGlobalFunctions (kNewtRefNIL),
     fFiles (NULL),
     fNativeModules (NULL),
-    fNumFiles (0)
+    fNumFiles (0),
+    fRelocations(kNewtRefNIL)
 {
     newtRefVar files, map;
     int i;
@@ -93,19 +94,30 @@ newtRef TPart::MLoadNativeModule (const char *f)
     int file;
     struct stat st;
     uint8_t *data;
-    newtRef binary, name, code, entryPoints, relocations;
+    newtRef binary, name, code, entryPoints, relocations, nativeFuncs;
 
-    printf ("Reading module %s\n", f);
     file = open(f, O_RDONLY);
     fstat (file, &st);
+    printf ("Reading module %s, size %d\n", f, st.st_size);
     data = (uint8_t *) malloc (st.st_size);
     read (file, data, st.st_size);
     binary = NewtReadNSOF (data, st.st_size);
     name = NcGetSlot (binary, NewtMakeSymbol ("name"));
     code = NcGetSlot (binary, NewtMakeSymbol ("code"));
     entryPoints = NcGetSlot (binary, NewtMakeSymbol ("entryPoints"));
-    relocations = NcGetSlot (binary, NewtMakeSymbol ("relocations"));
-    NcSetGlobalVar (name,  binary);
+    nativeFuncs = NsMakeFrame (kNewtRefNIL);
+    for (size_t t = 0; t < NewtArrayLength (entryPoints); t++) {
+        newtRef ep (NewtGetArraySlot (entryPoints, t));
+        newtRef func = NsMakeFrame (kNewtRefNIL);
+        NsSetSlot (kNewtRefNIL, func, NSSYM0(__class), NSSYM(BinCFunction));
+        NsSetSlot (kNewtRefNIL, func, NSSYM(numArgs), NsGetSlot (kNewtRefNIL, ep, NSSYM (numArgs)));
+        NsSetSlot (kNewtRefNIL, func, NSSYM(offset), NsGetSlot (kNewtRefNIL, ep, NSSYM (offset)));
+        NsSetSlot (kNewtRefNIL, func, NSSYM(code), code);
+        NsSetSlot (kNewtRefNIL, nativeFuncs, NsGetSlot (kNewtRefNIL, ep, NSSYM (name)), func);
+    }
+    fRelocations = NcGetSlot (binary, NewtMakeSymbol ("relocations"));
+    NsSetSlot (kNewtRefNIL, nativeFuncs, NSSYM(relocations), fRelocations);
+    NcSetGlobalVar (name,  nativeFuncs);
     close (file);
     free (data);
     return binary;

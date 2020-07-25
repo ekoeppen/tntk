@@ -27,6 +27,7 @@ public:
     newtRefVar                  fMainForm;
     newtRefVar                  fConstants;
     newtRefVar                  fGlobalFunctions;
+    newtRefVar                  fRelocations;
 
                                 TPart (newtRefVar partInfo);
                                 ~TPart ();

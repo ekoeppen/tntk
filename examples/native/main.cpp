@@ -11,10 +11,13 @@ __attribute__((naked)) void einstein_puts(const char *str)
         ".word      0x11a\n");
 }
 
+const char *msg = "Hello, World!";
+
 extern "C" Ref Hello(RefArg inRcvr)
 {
-    char buffer[80];
-    strcpy(buffer, "Hello, World!");
+    char buffer[32];
+    buffer[sizeof(buffer) - 1] = 0;
+    strncpy(buffer, msg, sizeof(buffer) - 1);
     einstein_puts(buffer);
-    return MAKEINT(&strcpy);
+    return MAKEINT(0);
 }

@@ -113,6 +113,7 @@ void TPackage::MBuildPackage ()
     newtRef parts;
     newtRef package;
     newtRefVar packageData;
+    unsigned int flags = 0x10000000;
 
     NVMInit ();
     MReadProjectFile ();
@@ -123,6 +124,7 @@ void TPackage::MBuildPackage ()
         fParts[i]->MBuildPart (fPlatformFileName);
     }
     parts = NewtMakeArray(kNewtRefNIL, fNumParts);
+    package = NcMakeFrame();
     for (i = 0; i < fNumParts; i++) {
         part = NcMakeFrame();
         NcSetSlot(part, NSSYM(class), NSSYM(PackagePart));
@@ -131,15 +133,18 @@ void TPackage::MBuildPackage ()
         NcSetSlot(part, NSSYM(type), NewtMakeInt32(fParts[i]->fType));
         NcSetSlot(part, NSSYM(data), fParts[i]->fMainForm);
         NewtSetArraySlot(parts, i, part);
+        if (fParts[i]->fRelocations != kNewtRefNIL) {
+            NcSetSlot(package, NSSYM(relocations), fParts[i]->fRelocations);
+            flags |= 0x04000000;
+        }
     }
-    package = NcMakeFrame();
     NcSetSlot(package, NSSYM(class), NSSYM(PackageHeader));
     NcSetSlot(package, NSSYM(type), NewtMakeInt32('xxxx'));
     NcSetSlot(package, NSSYM(pkg_version), NewtMakeInt32(0));
     NcSetSlot(package, NSSYM(version), NewtMakeInt32(1));
     NcSetSlot(package, NSSYM(copyright), NewtMakeString("Eckhart Koeppen", false));
     NcSetSlot(package, NSSYM(name), NewtMakeString(fPackageName, false));
-    NcSetSlot(package, NSSYM(flags), NewtMakeInt32(0x10000000));
+    NcSetSlot(package, NSSYM(flags), NewtMakeInt32(flags));
     NcSetSlot(package, NSSYM(parts), parts);
     packageData = NsMakePkg(kNewtRefNIL, package);
     fPackageDataLen = NewtBinaryLength(packageData);

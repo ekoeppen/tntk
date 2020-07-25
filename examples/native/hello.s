@@ -10,3 +10,4 @@
     .arch armv4
 
     JT strcpy, 01BB5AAC
+    JT strncpy, 01BB5ABC

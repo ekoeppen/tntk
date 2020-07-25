@@ -4,12 +4,7 @@ mainView := {
     appSymbol: '|Hello:40Hz|,
     viewJustify: vjParentTopV + vjParentLeftH,
     viewBounds: {left: 32, top: 32, right: 120, bottom: 120},
-    h: {
-        class: 'BinCFunction,
-        code: hello.code,
-        numArgs: 0,
-        offset: 24
-    },
+    h: hello.Hello,
 
     stepChildren: [
         {
@@ -17,7 +12,7 @@ mainView := {
             text: "Hello!",
             viewBounds: {left: 8, top: 8, right: 80, bottom: 24},
             buttonClickScript: func() begin
-                call :Parent().h with ();
+                :h();
             end,
         },
     ]
