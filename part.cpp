@@ -48,6 +48,7 @@ TPart::TPart (newtRefVar partInfo):
     fGlobalFunctions (kNewtRefNIL),
     fFiles (NULL),
     fNativeModules (NULL),
+    fNumNativeModules (0),
     fNumFiles (0),
     fRelocations(kNewtRefNIL)
 {
