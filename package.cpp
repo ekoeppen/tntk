@@ -133,7 +133,7 @@ void TPackage::MBuildPackage ()
         NcSetSlot(part, NSSYM(type), NewtMakeInt32(fParts[i]->fType));
         NcSetSlot(part, NSSYM(data), fParts[i]->fMainForm);
         NewtSetArraySlot(parts, i, part);
-        if (fParts[i]->fRelocations != kNewtRefNIL) {
+        if (fParts[i]->fRelocations != kNewtRefUnbind && fParts[i]->fRelocations != kNewtRefNIL) {
             NcSetSlot(package, NSSYM(relocations), fParts[i]->fRelocations);
             flags |= 0x04000000;
         }
