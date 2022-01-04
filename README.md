@@ -7,19 +7,18 @@ PREREQUISITES
 -------------
 
 * [CMake](http://www.cmake.org/cmake/resources/software.html)
-* [NEWT/0](https://github.com/ekoeppen/NEWT0)
 * [cDCL](http://github.com/ekoeppen/cDCL)
 
 
 INSTALLATION
 ------------
 
-1. Install CMake, NEWT/0, and cDCL, if you haven't already
-2. `git clone git@github.com:ekoeppen/tntk.git`
+1. Install CMake and cDCL, if you haven't already
+2. `git clone --recursive git@github.com:ekoeppen/tntk.git`
 3. `cd tntk`
-4. `cmake CMakeLists.txt`
-5. `make`
-6. `sudo make install`
+4. `cmake -S . -B build`
+5. `cmake --build build`
+6. `sudo cmake --install build`
 
 You will also need the [NTK Platform Files](http://www.unna.org/view.php?/apple/development/NTK/platformfiles).
 
