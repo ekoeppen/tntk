@@ -28,6 +28,7 @@ public:
     newtRefVar                  fConstants;
     newtRefVar                  fGlobalFunctions;
     newtRefVar                  fRelocations;
+    int                         fBaseAddress;
 
                                 TPart (newtRefVar partInfo);
                                 ~TPart ();

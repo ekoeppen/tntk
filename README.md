@@ -45,3 +45,9 @@ For further examples of usage, see the following articles:
 * [Autoparts with tntk](http://40hz.org/Pages/Mottek:%202011-01-09)
 * [Developing Newton apps with Einstein, TextMate and tntk](http://40hz.org/Pages/Mottek:%202011-01-16)
 
+NATIVE CODE SUPPORT
+-------------------
+
+tntk can process NTCK files, and add relocation data as needed to the output package. For this
+to work, the binary module must have been linked with a base address larger than zero, e.g. 0x10000
+is a good value, and cDCL version 1.0 must be used to convert the ELF file to an NTCK module.

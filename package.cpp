@@ -54,6 +54,7 @@ TPackage::TPackage (const char *projectFileName):
     fOutputFileName (NULL),
     fPlatformFileName (NULL),
     fProjectFileName (NULL),
+    fCopyright(NULL),
     fPackageData (NULL),
     fPackageDataLen (0),
     fParts (NULL),
@@ -74,6 +75,7 @@ void TPackage::MReset ()
     delete fOutputFileName;
     delete fPlatformFileName;
     delete fPackageData;
+    delete fCopyright;
 
     fPackageName = NULL;
     fOutputFileName = NULL;
@@ -135,6 +137,7 @@ void TPackage::MBuildPackage ()
         NewtSetArraySlot(parts, i, part);
         if (fParts[i]->fRelocations != kNewtRefUnbind && fParts[i]->fRelocations != kNewtRefNIL) {
             NcSetSlot(package, NSSYM(relocations), fParts[i]->fRelocations);
+            NcSetSlot(package, NSSYM(nativeBaseAddress), NewtMakeInteger(fParts[i]->fBaseAddress));
             flags |= 0x04000000;
         }
     }
@@ -142,7 +145,7 @@ void TPackage::MBuildPackage ()
     NcSetSlot(package, NSSYM(type), NewtMakeInt32('xxxx'));
     NcSetSlot(package, NSSYM(pkg_version), NewtMakeInt32(flags & 0x04000000 ? 1 : 0));
     NcSetSlot(package, NSSYM(version), NewtMakeInt32(1));
-    NcSetSlot(package, NSSYM(copyright), NewtMakeString("Eckhart Koeppen", false));
+    NcSetSlot(package, NSSYM(copyright), NewtMakeString(fCopyright, false));
     NcSetSlot(package, NSSYM(name), NewtMakeString(fPackageName, false));
     NcSetSlot(package, NSSYM(flags), NewtMakeInt32(flags));
     NcSetSlot(package, NSSYM(parts), parts);
@@ -155,7 +158,7 @@ void TPackage::MBuildPackage ()
 
 void TPackage::MReadProjectFile ()
 {
-    newtRefVar project, p, parts;
+    newtRefVar project, p, copyright, parts;
     char* c;
     int i, n;
 
@@ -165,6 +168,12 @@ void TPackage::MReadProjectFile ()
     p = NcGetSlot (project, NewtMakeSymbol ("platform"));
     if (p != kNewtRefNIL) {
         fPlatformFileName = strdup (NewtRefToString (p));
+    }
+    copyright = NcGetSlot (project, NewtMakeSymbol ("copyright"));
+    if (NewtRefIsString (copyright)) {
+        fCopyright = strdup (NewtRefToString (copyright));
+    } else {
+        fCopyright = strdup ("");
     }
     fPackageName = strdup (NewtRefToString (NcGetSlot (project, NewtMakeSymbol ("name"))));
     fOutputFileName = (char*) malloc (strlen (fProjectFileName) + sizeof (kPackageNameSuffix));

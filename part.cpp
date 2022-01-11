@@ -95,11 +95,11 @@ newtRef TPart::MLoadNativeModule (const char *f)
     int file;
     struct stat st;
     uint8_t *data;
-    newtRef binary, name, code, entryPoints, relocations, nativeFuncs;
+    newtRef binary, name, code, entryPoints, relocations, nativeFuncs, baseAddress;
 
     file = open(f, O_RDONLY);
     fstat (file, &st);
-    printf ("Reading module %s, size %d\n", f, st.st_size);
+    printf ("Reading module %s, size %lld\n", f, st.st_size);
     data = (uint8_t *) malloc (st.st_size);
     read (file, data, st.st_size);
     binary = NewtReadNSOF (data, st.st_size);
@@ -117,6 +117,8 @@ newtRef TPart::MLoadNativeModule (const char *f)
         NsSetSlot (kNewtRefNIL, nativeFuncs, NsGetSlot (kNewtRefNIL, ep, NSSYM (name)), func);
     }
     fRelocations = NcGetSlot (binary, NewtMakeSymbol ("relocations"));
+    baseAddress = NcGetSlot (binary, NewtMakeSymbol ("baseAddress"));
+    fBaseAddress = NewtRefIsInteger (baseAddress) ? NewtRefToInteger (baseAddress) : 0;
     NsSetSlot (kNewtRefNIL, nativeFuncs, NSSYM(relocations), fRelocations);
     NcSetGlobalVar (name,  nativeFuncs);
     close (file);
