@@ -140,7 +140,7 @@ void TPackage::MBuildPackage ()
     }
     NcSetSlot(package, NSSYM(class), NSSYM(PackageHeader));
     NcSetSlot(package, NSSYM(type), NewtMakeInt32('xxxx'));
-    NcSetSlot(package, NSSYM(pkg_version), NewtMakeInt32(0));
+    NcSetSlot(package, NSSYM(pkg_version), NewtMakeInt32(flags & 0x04000000 ? 1 : 0));
     NcSetSlot(package, NSSYM(version), NewtMakeInt32(1));
     NcSetSlot(package, NSSYM(copyright), NewtMakeString("Eckhart Koeppen", false));
     NcSetSlot(package, NSSYM(name), NewtMakeString(fPackageName, false));
