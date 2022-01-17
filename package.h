@@ -3,6 +3,7 @@
 
 #include <NewtCore.h>
 #include "part.h"
+#include "preferences.h"
 
 class TPackage
 {
@@ -10,16 +11,16 @@ public:
     int                         fPackageDataLen;
     unsigned char*              fPackageData;
 
+    TPreferences*               fPreferences;
     char*                       fPackageName;
     char*                       fOutputFileName;
     char*                       fPlatformFileName;
-    char*                       fProjectFileName;
     char*                       fCopyright;
     
     TPart**                     fParts;
     int                         fNumParts;
 
-                                TPackage (const char* projectFileName);
+                                TPackage (TPreferences* preferences);
                                 ~TPackage ();
 
     void                        MBuildPackage ();

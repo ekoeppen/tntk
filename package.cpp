@@ -25,6 +25,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h>
 
 // ISO C++
 #include <stdexcept>
@@ -49,24 +50,22 @@ const char *kDefaultName = "Test";
 const char *kDefaultOutput = "test.pkg";
 const char *kOptions = "m:o:n:p:";
 
-TPackage::TPackage (const char *projectFileName):
+TPackage::TPackage (TPreferences* preferences):
+    fPreferences(preferences),
     fPackageName (NULL),
     fOutputFileName (NULL),
     fPlatformFileName (NULL),
-    fProjectFileName (NULL),
     fCopyright(NULL),
     fPackageData (NULL),
     fPackageDataLen (0),
     fParts (NULL),
     fNumParts (0)
 {
-    fProjectFileName = strdup (projectFileName);
 }
 
 TPackage::~TPackage ()
 {
     MReset ();
-    delete fProjectFileName;
 }
 
 void TPackage::MReset ()
@@ -160,14 +159,31 @@ void TPackage::MReadProjectFile ()
 {
     newtRefVar project, p, copyright, parts;
     char* c;
+    char* platformFileName = NULL;
     int i, n;
 
     MReset ();
-    printf ("Reading project file %s\n", fProjectFileName);
-    project = MInterpretFile (fProjectFileName);
+    printf ("Reading project file %s\n", fPreferences->fProjectFileName);
+    project = MInterpretFile (fPreferences->fProjectFileName);
     p = NcGetSlot (project, NewtMakeSymbol ("platform"));
     if (p != kNewtRefNIL) {
-        fPlatformFileName = strdup (NewtRefToString (p));
+        platformFileName = strdup (NewtRefToString (p));
+        fPlatformFileName = (char *) malloc(PATH_MAX);
+        if (platformFileName[0] == '/') {
+            strcpy(fPlatformFileName, platformFileName);
+        } else {
+            for (char** path = fPreferences->fPlatformFileSearchPaths; *path != NULL; path++) {
+                struct stat s;
+                strcpy(fPlatformFileName, *path);
+                strcat(fPlatformFileName, "/");
+                strcat(fPlatformFileName, platformFileName);
+                if (stat(fPlatformFileName, &s) == 0) {
+                    break;
+                } else {
+                    fPlatformFileName[0] = '\0';
+                }
+            }
+        }
     }
     copyright = NcGetSlot (project, NewtMakeSymbol ("copyright"));
     if (NewtRefIsString (copyright)) {
@@ -176,8 +192,8 @@ void TPackage::MReadProjectFile ()
         fCopyright = strdup ("");
     }
     fPackageName = strdup (NewtRefToString (NcGetSlot (project, NewtMakeSymbol ("name"))));
-    fOutputFileName = (char*) malloc (strlen (fProjectFileName) + sizeof (kPackageNameSuffix));
-    strcpy (fOutputFileName, fProjectFileName);
+    fOutputFileName = (char*) malloc (strlen (fPreferences->fProjectFileName) + sizeof (kPackageNameSuffix));
+    strcpy (fOutputFileName, fPreferences->fProjectFileName);
     c = strrchr (fOutputFileName, '.');
     if (c != NULL) *c = 0;
     strcat (fOutputFileName, kPackageNameSuffix);
@@ -208,8 +224,8 @@ void TPackage::MDumpPackage ()
     NVMInit ();
     NcSetGlobalVar (NSSYM0 (printDepth), NewtMakeInt32(9999));
     NcSetGlobalVar (NSSYM0 (printLength), NewtMakeInt32(9999));
-    stat (fProjectFileName, &st);
-    f = fopen (fProjectFileName, "rb");
+    stat (fPreferences->fProjectFileName, &st);
+    f = fopen (fPreferences->fProjectFileName, "rb");
     fPackageDataLen = st.st_size;
     fPackageData = (unsigned char *) malloc (fPackageDataLen);
     fread (fPackageData, fPackageDataLen, 1, f);

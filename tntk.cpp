@@ -37,7 +37,7 @@ TTntkBase::TTntkBase (int argc, char* argv[]):
     fPreferences = new TPreferences ();
     fPreferences->MInitPreferences (argc, argv);
     if (fPreferences->fProjectFileName != NULL) {
-        fPackage = new TPackage (fPreferences->fProjectFileName);
+        fPackage = new TPackage (fPreferences);
     }
 }
 

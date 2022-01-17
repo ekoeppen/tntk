@@ -6,5 +6,5 @@
 	}
 	],
 		name: "MiniNewtApp:40hz",
-		platform: "/Applications/Newton/NTK 1.6.4/Platforms/Newton 2.1"
+		platform: "Newton 2.1"
 }
