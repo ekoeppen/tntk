@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 project (tntk)
+option(USE_DCL "Use DCL when found" ON)
 add_executable (tntk
 package.cpp
 part.cpp
@@ -15,7 +16,9 @@ target_include_directories(tntk PUBLIC NEWT0/src/newt_core/incs)
 
 find_library(ICONV_LIBRARY NAMES iconv libiconv libiconv-2 c)
 find_library(READLINE_LIBRARY NAMES readline)
-find_library(DCL_LIBRARY NAMES DCL)
+if (USE_DCL)
+	find_library(DCL_LIBRARY NAMES DCL)
+endif (USE_DCL)
 
 target_link_libraries (tntk ${ICONV_LIBRARY} libnewt)
 
