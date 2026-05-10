@@ -11,12 +11,25 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
+      uses: actions/checkout@v4
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libreadline-dev flex bison
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install readline flex bison
+        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
+    - name: Install dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install winflexbison
     - name: Configure
       run: |
         cmake -S . -B build
@@ -24,8 +37,10 @@ jobs:
       run: |
         cmake --build build
     - name: Store artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: tntk-${{ matrix.os }}
-        path: build/tntk
+        path: |
+          build/tntk
+          build/Debug/tntk.exe
 

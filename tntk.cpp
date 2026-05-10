@@ -1,5 +1,10 @@
 #include <stdio.h>
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#else
 #include <strings.h>
+#include <unistd.h>
+#endif
 #ifdef HAVE_LIBREADLINE
 #include <readline/readline.h>
 #endif
@@ -15,12 +20,14 @@
 #include <DCL/Link/Inspector_Commands/TDCLInspectorCmdDeletePkg.h>
 #endif
 
+extern "C" {
 #include <NewtCore.h>
 #include <NewtVM.h>
 #include <NewtBC.h>
 #include <NewtParser.h>
 #include <NewtNSOF.h>
 #include <NewtPrint.h>
+}
 
 #include "tntk.h"
 #include "package.h"
