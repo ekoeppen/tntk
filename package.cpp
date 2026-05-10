@@ -19,6 +19,7 @@
 // ***** END LICENSE BLOCK *****
 
 // ANSI C & POSIX
+#include <cstdio>
 #include <libgen.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +40,7 @@
 #include <NewtGC.h>
 #include <NewtPkg.h>
 #include <NewtPrint.h>
+#include <unistd.h>
 
 #include "package.h"
 #include "part.h"
@@ -127,6 +129,8 @@ void TPackage::MBuildPackage ()
     parts = NewtMakeArray(kNewtRefNIL, fNumParts);
     package = NcMakeFrame();
     for (i = 0; i < fNumParts; i++) {
+        printf("Encoding Part %d %x...\n", i, fParts[i]->fMainForm);
+        NewtPrintObject(stdout, fParts[i]->fMainForm);
         part = NcMakeFrame();
         NcSetSlot(part, NSSYM(class), NSSYM(PackagePart));
         NcSetSlot(part, NSSYM(info), NewtMakeBinary(NSSYM(binary), (uint8_t*)"A Newton Toolkit application", /*28*/24, false));
@@ -168,6 +172,7 @@ void TPackage::MReadProjectFile ()
     p = NcGetSlot (project, NewtMakeSymbol ("platform"));
     if (p != kNewtRefNIL) {
         platformFileName = strdup (NewtRefToString (p));
+        printf ("Reading platform file %s\n", platformFileName);
         fPlatformFileName = (char *) malloc(PATH_MAX);
         if (platformFileName[0] == '/') {
             strcpy(fPlatformFileName, platformFileName);
@@ -180,7 +185,8 @@ void TPackage::MReadProjectFile ()
                 if (stat(fPlatformFileName, &s) == 0) {
                     break;
                 } else {
-                    fPlatformFileName[0] = '\0';
+                    printf ("Platform file %s not found, aborting", platformFileName);
+                    exit (1);
                 }
             }
         }
