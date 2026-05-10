@@ -1,0 +1,11 @@
+{
+	parts: [
+		{
+			main: "Main.newt",
+			files: [],
+		}
+	],
+	name: "HelloWorld:40hz",
+	platform: "Newton 2.1"
+}
+

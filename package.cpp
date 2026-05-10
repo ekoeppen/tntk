@@ -13,14 +13,13 @@
 //
 // The Original Code is newtpackage.cpp.
 //
-// The Initial Developer of the Original Code is Eckhart Köppen.
+// The Initial Developer of the Original Code is Eckhart Kï¿½ppen.
 // Copyright (C) 2004 the Initial Developer. All Rights Reserved.
 //
 // ***** END LICENSE BLOCK *****
 
 // ANSI C & POSIX
 #include <cstdio>
-#include <libgen.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -28,10 +27,22 @@
 #include <fcntl.h>
 #include <limits.h>
 
+#ifdef _WIN32
+#include <io.h>
+#define strdup _strdup
+#ifndef PATH_MAX
+#define PATH_MAX _MAX_PATH
+#endif
+#else
+#include <libgen.h>
+#include <unistd.h>
+#endif
+
 // ISO C++
 #include <stdexcept>
 
 // NEWT/0
+extern "C" {
 #include <NewtCore.h>
 #include <NewtVM.h>
 #include <NewtParser.h>
@@ -40,7 +51,7 @@
 #include <NewtGC.h>
 #include <NewtPkg.h>
 #include <NewtPrint.h>
-#include <unistd.h>
+}
 
 #include "package.h"
 #include "part.h"

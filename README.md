@@ -14,7 +14,7 @@ INSTALLATION
 ------------
 
 1. Install CMake and cDCL, if you haven't already
-2. `git clone --recursive git@github.com:ekoeppen/tntk.git`
+2. `git clone git@github.com:ekoeppen/tntk.git`
 3. `cd tntk`
 4. `cmake -S . -B build`
 5. `cmake --build build`

@@ -1,0 +1,21 @@
+kAppSymbol := '|HelloWorld:40Hz|;
+kAppTitle := "HelloWorld";
+kVersion := "1.0";
+
+mainView := {
+    _proto:     protoFloatNGo,
+    viewBounds: { left: 8, right: 94, top: 140, bottom: 198 },
+    title: kAppTitle,
+    appSymbol: kAppSymbol,
+    buttonClickScript: func() begin
+        local x := 3;
+        return x;
+    end,
+    stepChildren: [
+        {
+            _proto: protoStaticText,
+            viewBounds: { left: 5, top: 5, right: 125, bottom: 25},
+            text: "Newton lives!",
+        },
+    ],
+};

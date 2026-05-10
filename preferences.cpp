@@ -1,7 +1,15 @@
-#include <strings.h>
 #include <string.h>
 #include <stdlib.h>
+
+#ifdef _WIN32
+#include "win32/getopt.h"
+#define strcasecmp _stricmp
+#define strdup _strdup
+#else
 #include <getopt.h>
+#include <strings.h>
+#endif
+
 #include "preferences.h"
 
 static const char kOptions[] = "p:s:t:P:l:cd";

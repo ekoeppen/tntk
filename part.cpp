@@ -19,16 +19,23 @@
 // ***** END LICENSE BLOCK *****
 
 // ANSI C & POSIX
-#include <libgen.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <ctype.h>
 
+#ifdef _WIN32
+#include <io.h>
+#define strdup _strdup
+#else
+#include <libgen.h>
+#include <unistd.h>
+#endif
+
 // NEWT/0
+extern "C" {
 #include <NewtCore.h>
 #include <NewtVM.h>
 #include <NewtParser.h>
@@ -37,6 +44,7 @@
 #include <NewtGC.h>
 #include <NewtPkg.h>
 #include <NewtPrint.h>
+}
 
 #include "part.h"
 #include "NewtType.h"
@@ -100,7 +108,7 @@ newtRef TPart::MLoadNativeModule (const char *f)
 
     file = open(f, O_RDONLY);
     fstat (file, &st);
-    printf ("Reading module %s, size %lld\n", f, st.st_size);
+    printf ("Reading module %s, size %ld\n", f, (long)st.st_size);
     data = (uint8_t *) malloc (st.st_size);
     read (file, data, st.st_size);
     binary = NewtReadNSOF (data, st.st_size);
