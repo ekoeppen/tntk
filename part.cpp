@@ -13,7 +13,7 @@
 //
 // The Original Code is part.cpp.
 //
-// The Initial Developer of the Original Code is Eckhart Kšppen.
+// The Initial Developer of the Original Code is Eckhart Kï¿½ppen.
 // Copyright (C) 2004 the Initial Developer. All Rights Reserved.
 //
 // ***** END LICENSE BLOCK *****
@@ -39,6 +39,7 @@
 #include <NewtPrint.h>
 
 #include "part.h"
+#include "NewtType.h"
 
 const char *helper = " __tntk := func() begin end;\nDefGlobalVar('theBase, __tntk.argFrame);\n";
 
@@ -173,18 +174,6 @@ newtRef TPart::MInterpretFile (const char *f)
     fn = NBCGenBC (stree, numStree, true);
     NBCCleanup ();
     fn = NVMCall (fn, 0, &err);
-
-    /* Remove the local variables of the called function to avoid inifite
-     * recursion when writing the package */
-    base = NcGetGlobalVar (NSSYM (theBase));
-    obj = NewtRefToPointer (base);
-    /*
-    for (i = NewtObjSlotsLength (obj) - 1; i > 2; i--) {
-        size_t index;
-        newtRefVar slot = NewtGetMapIndex (obj->as.map, i, &index);
-        NcRemoveSlot(base, slot);
-    }
-    */
     NPSCleanup ();
     return fn;
 }
@@ -220,7 +209,6 @@ void TPart::MBuildPart (const char *platformFileName)
     int len;
     int i;
 
-    NVMInit ();
     for (i = 0; i < fNumNativeModules; i++) {
         MLoadNativeModule (fNativeModules[i]);
     }
@@ -230,6 +218,4 @@ void TPart::MBuildPart (const char *platformFileName)
     }
     MReadPlatformFile (platformFileName);
     fMainForm = MInterpretFile (fMainFile);
-
-    NVMClean ();
 }
