@@ -19,3 +19,9 @@ mainView := {
         },
     ],
 };
+
+{
+    app: kAppSymbol,
+    text: "Hello!",
+    theForm: mainView,
+}
