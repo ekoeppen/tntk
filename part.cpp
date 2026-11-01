@@ -13,7 +13,7 @@
 //
 // The Original Code is part.cpp.
 //
-// The Initial Developer of the Original Code is Eckhart K�ppen.
+// The Initial Developer of the Original Code is Eckhart Köppen.
 // Copyright (C) 2004 the Initial Developer. All Rights Reserved.
 //
 // ***** END LICENSE BLOCK *****
@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <limits.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -49,28 +50,59 @@ extern "C" {
 #include "part.h"
 #include "NewtType.h"
 
+#ifndef PATH_MAX
+#ifdef _MAX_PATH
+#define PATH_MAX _MAX_PATH
+#else
+#define PATH_MAX 4096
+#endif
+#endif
+
+static char* ResolvePath(const char* baseDir, const char* path)
+{
+    if (path == NULL) return NULL;
+    if (path[0] == '/'
+#ifdef _WIN32
+        || (isalpha((unsigned char)path[0]) && path[1] == ':') || path[0] == '\\'
+#endif
+    ) {
+        return strdup(path);
+    }
+    if (baseDir == NULL || strlen(baseDir) == 0 || strcmp(baseDir, ".") == 0) {
+        return strdup(path);
+    }
+    char buf[PATH_MAX];
+    snprintf(buf, sizeof(buf), "%s/%s", baseDir, path);
+    return strdup(buf);
+}
+
 const char *helper = " __tntk := func() begin end;\nDefGlobalVar('theBase, __tntk.argFrame);\n";
 
-TPart::TPart (newtRefVar partInfo):
+TPart::TPart (newtRefVar partInfo, const char* projectDir):
     fType (kForm),
+    fMainFile (NULL),
     fConstants (kNewtRefNIL),
     fGlobalFunctions (kNewtRefNIL),
     fFiles (NULL),
     fNativeModules (NULL),
     fNumNativeModules (0),
     fNumFiles (0),
-    fRelocations(kNewtRefNIL)
+    fRelocations(kNewtRefNIL),
+    fBaseAddress(0)
 {
-    newtRefVar files, map;
+    newtRefVar files, mainSlot;
     int i;
 
-    fMainFile = strdup (NewtRefToString (NcGetSlot (partInfo, NewtMakeSymbol ("main"))));
+    mainSlot = NcGetSlot (partInfo, NewtMakeSymbol ("main"));
+    if (mainSlot != kNewtRefUnbind && NewtRefIsString (mainSlot)) {
+        fMainFile = ResolvePath (projectDir, NewtRefToString (mainSlot));
+    }
     files = NcGetSlot (partInfo, NewtMakeSymbol ("files"));
     if (files != kNewtRefUnbind) {
         fNumFiles = NewtArrayLength (files);
         fFiles = (char **) malloc (fNumFiles * sizeof (char *));
         for (i = 0; i < fNumFiles; i++) {
-            fFiles[i] = strdup (NewtRefToString (NewtGetArraySlot (files, i)));
+            fFiles[i] = ResolvePath (projectDir, NewtRefToString (NewtGetArraySlot (files, i)));
         }
     }
     files = NcGetSlot (partInfo, NewtMakeSymbol ("modules"));
@@ -78,7 +110,7 @@ TPart::TPart (newtRefVar partInfo):
         fNumNativeModules = NewtArrayLength (files);
         fNativeModules = (char **) malloc (fNumNativeModules * sizeof (char *));
         for (i = 0; i < fNumNativeModules; i++) {
-            fNativeModules[i] = strdup (NewtRefToString (NewtGetArraySlot (files, i)));
+            fNativeModules[i] = ResolvePath (projectDir, NewtRefToString (NewtGetArraySlot (files, i)));
         }
     }
     if (NcGetSlot (partInfo, NewtMakeSymbol ("type")) == NewtMakeSymbol ("auto")) {
@@ -89,14 +121,14 @@ TPart::TPart (newtRefVar partInfo):
 TPart::~TPart ()
 {
     while (fNumFiles-- > 0) {
-        delete fFiles[fNumFiles];
+        free (fFiles[fNumFiles]);
     }
     while (fNumNativeModules-- > 0) {
-        delete fNativeModules[fNumNativeModules];
+        free (fNativeModules[fNumNativeModules]);
     }
-    delete fFiles;
-    delete fNativeModules;
-    delete fMainFile;
+    free (fFiles);
+    free (fNativeModules);
+    free (fMainFile);
 }
 
 newtRef TPart::MLoadNativeModule (const char *f)
@@ -107,10 +139,28 @@ newtRef TPart::MLoadNativeModule (const char *f)
     newtRef binary, name, code, entryPoints, relocations, nativeFuncs, baseAddress;
 
     file = open(f, O_RDONLY);
-    fstat (file, &st);
+    if (file < 0) {
+        fprintf (stderr, "Error: cannot open module file %s\n", f);
+        exit (1);
+    }
+    if (fstat (file, &st) != 0) {
+        fprintf (stderr, "Error: cannot stat module file %s\n", f);
+        close (file);
+        exit (1);
+    }
     printf ("Reading module %s, size %ld\n", f, (long)st.st_size);
     data = (uint8_t *) malloc (st.st_size);
-    read (file, data, st.st_size);
+    if (data == NULL && st.st_size > 0) {
+        fprintf (stderr, "Error: out of memory reading %s\n", f);
+        close (file);
+        exit (1);
+    }
+    if (read (file, data, st.st_size) < 0) {
+        fprintf (stderr, "Error reading %s\n", f);
+        close (file);
+        free (data);
+        exit (1);
+    }
     binary = NewtReadNSOF (data, st.st_size);
     name = NcGetSlot (binary, NewtMakeSymbol ("name"));
     code = NcGetSlot (binary, NewtMakeSymbol ("code"));
@@ -139,31 +189,56 @@ newtRef TPart::MInterpretFile (const char *f)
 {
     nps_syntax_node_t *stree = NULL;
     uint32_t numStree = 0;
-    uint32_t len;
     newtRefVar fn = kNewtRefNIL;
     newtRefVar constants;
     newtErr err;
     newtRefVar map, s, v;
     char *script;
-    newtRefVar base = kNewtRefNIL;
-    newtObjRef obj;
     int i;
     int file;
     struct stat st;
+
+    if (f == NULL) {
+        fprintf (stderr, "Error: no script file specified\n");
+        exit (1);
+    }
 
     printf ("Compiling %s\n", f);
 
     /* Read the script into a string and prepend it with the helper
      * function which exposes the local variable frame */
     file = open(f, O_RDONLY);
-    fstat (file, &st);
+    if (file < 0) {
+        fprintf (stderr, "Error: cannot open script file %s\n", f);
+        exit (1);
+    }
+    if (fstat (file, &st) != 0) {
+        fprintf (stderr, "Error: cannot stat script file %s\n", f);
+        close (file);
+        exit (1);
+    }
     script = (char *) malloc (st.st_size + strlen (helper) + 1);
+    if (script == NULL) {
+        fprintf (stderr, "Error: out of memory allocating script buffer for %s\n", f);
+        close (file);
+        exit (1);
+    }
     memset (script, 0, st.st_size + strlen (helper) + 1);
     strcpy (script, helper);
-    read (file, script + strlen(helper), st.st_size);
+    if (read (file, script + strlen(helper), st.st_size) < 0) {
+        fprintf (stderr, "Error reading %s\n", f);
+        close (file);
+        free (script);
+        exit (1);
+    }
     close (file);
 
     err = NPSParseStr (script, &stree, &numStree);
+    free (script);
+    if (err != kNErrNone) {
+        fprintf (stderr, "Error parsing %s\n", f);
+        exit (1);
+    }
 
     /* Add constants from the platform file */
     NBCInit ();
@@ -193,12 +268,29 @@ void TPart::MReadPlatformFile (const char *fileName)
     struct stat st;
     newtRefVar pf;
 
+    if (fileName == NULL) {
+        return;
+    }
     f = fopen (fileName, "rb");
     if (f != NULL) {
         printf ("Reading platform file %s\n", fileName);
-        fstat (fileno (f), &st);
+        if (fstat (fileno (f), &st) != 0) {
+            fprintf (stderr, "Error: cannot stat platform file %s\n", fileName);
+            fclose (f);
+            return;
+        }
         buffer = (uint8_t *) malloc (st.st_size);
-        fread (buffer, st.st_size, 1, f);
+        if (buffer == NULL && st.st_size > 0) {
+            fprintf (stderr, "Error: out of memory reading platform file %s\n", fileName);
+            fclose (f);
+            return;
+        }
+        if (fread (buffer, st.st_size, 1, f) != 1 && st.st_size > 0) {
+            fprintf (stderr, "Error reading platform file %s\n", fileName);
+            free (buffer);
+            fclose (f);
+            return;
+        }
         pf = NewtReadNSOF (buffer, st.st_size);
 
         fConstants = NcGetSlot (pf, NewtMakeSymbol ("platformConstants"));
@@ -206,15 +298,13 @@ void TPart::MReadPlatformFile (const char *fileName)
 
         free (buffer);
         fclose (f);
+    } else {
+        fprintf (stderr, "Error: cannot open platform file %s\n", fileName);
     }
 }
 
 void TPart::MBuildPart (const char *platformFileName)
 {
-    newtRefVar packageNSOF;
-    newtObjRef obj;
-    char* data;
-    int len;
     int i;
 
     for (i = 0; i < fNumNativeModules; i++) {

@@ -43,7 +43,7 @@ TTntkBase::TTntkBase (int argc, char* argv[]):
     NewtInit (argc, (const char **) argv, argc);
     fPreferences = new TPreferences ();
     fPreferences->MInitPreferences (argc, argv);
-    if (fPreferences->fProjectFileName != NULL) {
+    if (!fPreferences->fHelp && fPreferences->fProjectFileName != NULL) {
         fPackage = new TPackage (fPreferences);
     }
 }
@@ -54,14 +54,33 @@ TTntkBase::~TTntkBase ()
     delete fPreferences;
 }
 
-void TTntkBase::MRun ()
+int TTntkBase::MRun ()
 {
+    if (fPreferences->fHelp) {
+        fPreferences->MPrintUsage ("tntk");
+        return 0;
+    }
     if (fPreferences->fCompileOnly) {
+        if (fPreferences->fProjectFileName == NULL) {
+            fprintf (stderr, "Error: no project file specified for compilation.\n\n");
+            fPreferences->MPrintUsage ("tntk");
+            return 1;
+        }
         fPackage->MBuildPackage ();
         fPackage->MSavePackage ();
         printf ("Package %s created.\n", fPackage->fOutputFileName);
+        return 0;
     } else if (fPreferences->fDumpPackage) {
+        if (fPreferences->fProjectFileName == NULL) {
+            fprintf (stderr, "Error: no package file specified to dump.\n\n");
+            fPreferences->MPrintUsage ("tntk");
+            return 1;
+        }
         fPackage->MDumpPackage ();
+        return 0;
+    } else {
+        fPreferences->MPrintUsage ("tntk");
+        return 1;
     }
 }
 
@@ -72,15 +91,21 @@ TTntk::TTntk (int argc, char* argv[]):
     fDisconnect (false),
     fConnected (NULL)
 {
-    fConnected = GetThreadsIntf()->CreateSemaphore ();
-    fConnected->Acquire ();
-    mLogFile = fopen (fPreferences->fLogFileName, "w+");
+    if (!fPreferences->fHelp && !fPreferences->fCompileOnly && !fPreferences->fDumpPackage && fPreferences->fProjectFileName != NULL) {
+        fConnected = GetThreadsIntf()->CreateSemaphore ();
+        fConnected->Acquire ();
+        mLogFile = fopen (fPreferences->fLogFileName, "w+");
+    }
 }
 
 TTntk::~TTntk ()
 {
-    fclose (mLogFile);
-    delete fConnected;
+    if (mLogFile != NULL) {
+        fclose (mLogFile);
+    }
+    if (fConnected != NULL) {
+        delete fConnected;
+    }
 }
 
 IDCLFiles* TTntk::CreateFilesIntf ()
@@ -96,20 +121,28 @@ IDCLThreads* TTntk::CreateThreadsIntf ()
 void TTntk::ConnectedToNewtonDevice(TDCLLink* inLink, const KUInt16* inName)
 {
     puts ("----> Connected");
-    fConnected->Release ();
+    if (fConnected != NULL) {
+        fConnected->Release ();
+    }
 }
 
 void TTntk::Disconnected (TDCLLink* aLink)
 {
     TDCLLogApplication::Disconnected (aLink);
-    fConnected->Release ();
+    if (fConnected != NULL) {
+        fConnected->Release ();
+    }
 }
 
-void TTntk::MRun ()
+int TTntk::MRun ()
 {
-    if (fPreferences->fCompileOnly || fPreferences->fDumpPackage) {
-        TTntkBase::MRun();
+    if (fPreferences->fHelp || fPreferences->fCompileOnly || fPreferences->fDumpPackage) {
+        return TTntkBase::MRun();
     } else {
+        if (fPreferences->fProjectFileName == NULL) {
+            fPreferences->MPrintUsage ("tntk");
+            return 1;
+        }
         TDCLSimpleServer* server;
         TDCLSyncCommLayer* comms;
         TDCLInspectorLink *link;
@@ -127,6 +160,7 @@ void TTntk::MRun ()
 //    delete link;
 //    delete comms;
 //    delete server;
+        return 0;
     }
 }
 
@@ -158,22 +192,28 @@ void TTntk::MHandleCommand (char *command, TDCLLink *link)
             cmd.SendCommand (link->GetPipe ());
             } break;
         case 'c': {
-            fPackage->MBuildPackage ();
-            fPackage->MSavePackage ();
+            if (fPackage != NULL) {
+                fPackage->MBuildPackage ();
+                fPackage->MSavePackage ();
+            }
             } break;
         case 'd': {
-            printf ("Removing package %s.\n", fPackage->fPackageName);
-            TDCLInspectorCmdDeletePkg remove (fPackage->fPackageName);
-            remove.SendCommand (link->GetPipe ());
-            sleep (1);
-            printf ("Downloading package %s.\n", fPackage->fPackageName);
-            TDCLInspectorCmdLoadPkg load (fPackage->fPackageDataLen, fPackage->fPackageData);
-            load.SendCommand (link->GetPipe ());
+            if (fPackage != NULL) {
+                printf ("Removing package %s.\n", fPackage->fPackageName);
+                TDCLInspectorCmdDeletePkg remove (fPackage->fPackageName);
+                remove.SendCommand (link->GetPipe ());
+                sleep (1);
+                printf ("Downloading package %s.\n", fPackage->fPackageName);
+                TDCLInspectorCmdLoadPkg load (fPackage->fPackageDataLen, fPackage->fPackageData);
+                load.SendCommand (link->GetPipe ());
+            }
             } break;
         case 'x': {
-            printf ("Removing package %s.\n", fPackage->fPackageName);
-            TDCLInspectorCmdDeletePkg remove (fPackage->fPackageName);
-            remove.SendCommand (link->GetPipe ());
+            if (fPackage != NULL) {
+                printf ("Removing package %s.\n", fPackage->fPackageName);
+                TDCLInspectorCmdDeletePkg remove (fPackage->fPackageName);
+                remove.SendCommand (link->GetPipe ());
+            }
             } break;
     }
 }
@@ -184,7 +224,9 @@ void TTntk::MCommandLoop (TDCLServer *server, TDCLLink *link)
     char *s;
 
     fDisconnect = false;
-    fConnected->Acquire ();
+    if (fConnected != NULL) {
+        fConnected->Acquire ();
+    }
     while (!fDisconnect) {
 #ifdef HAVE_LIBREADLINE
         command = readline ("> ");
@@ -203,7 +245,9 @@ void TTntk::MCommandLoop (TDCLServer *server, TDCLLink *link)
         }
         free (command);
     }
-    fConnected->Release ();
+    if (fConnected != NULL) {
+        fConnected->Release ();
+    }
 }
 #endif
 
@@ -225,6 +269,7 @@ int main (int argc, char *argv[])
 #else
     app = new TTntkBase (argc, argv);
 #endif
-    app->MRun ();
-
+    int result = app->MRun ();
+    delete app;
+    return result;
 }

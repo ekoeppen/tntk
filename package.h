@@ -16,6 +16,7 @@ public:
     char*                       fOutputFileName;
     char*                       fPlatformFileName;
     char*                       fCopyright;
+    char*                       fProjectDir;
     
     TPart**                     fParts;
     int                         fNumParts;

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -12,7 +13,7 @@
 
 #include "preferences.h"
 
-static const char kOptions[] = "p:s:t:P:l:cd";
+static const char kOptions[] = "p:s:t:P:l:cdh";
 static const char kRcFile[] = ".tntkrc";
 static const char kDefaultPort[] = "/dev/ttyS0";
 static const char kDefaultLogFileName[] = "/dev/null";
@@ -23,10 +24,12 @@ TPreferences::TPreferences ():
     fPortSpeed (0),
     fPlatformFileSearchPaths (NULL),
     fConnectionType (kSerial),
+    fTcpPort (0),
     fLogFileName (NULL),
     fProjectFileName (NULL),
     fCompileOnly (false),
-    fDumpPackage (false)
+    fDumpPackage (false),
+    fHelp (false)
 {
     fPort = strdup (kDefaultPort);
     fLogFileName = strdup (kDefaultLogFileName);
@@ -36,15 +39,15 @@ TPreferences::~TPreferences ()
 {
     int i;
 
-    delete fPort;
+    free (fPort);
     if (fPlatformFileSearchPaths != NULL) {
         for (i = 0; fPlatformFileSearchPaths[i] != NULL; i++) {
-            delete fPlatformFileSearchPaths[i];
+            free (fPlatformFileSearchPaths[i]);
         }
-        delete fPlatformFileSearchPaths;
+        free (fPlatformFileSearchPaths);
     }
-    delete fLogFileName;
-    delete fProjectFileName;
+    free (fLogFileName);
+    free (fProjectFileName);
 }
 
 void TPreferences::MReadRcFile ()
@@ -58,13 +61,15 @@ void TPreferences::MSetPlatformFileSeachPaths (char* arg)
 
     if (fPlatformFileSearchPaths != NULL) {
         for (i = 0; fPlatformFileSearchPaths[i] != NULL; i++) {
-            delete fPlatformFileSearchPaths[i];
+            free (fPlatformFileSearchPaths[i]);
         }
-        delete fPlatformFileSearchPaths;
+        free (fPlatformFileSearchPaths);
+        fPlatformFileSearchPaths = NULL;
     }
 
+    char* copy = strdup (arg);
     i = 0;
-    p = strtok (arg, ":");
+    p = strtok (copy, ":");
     while (p != NULL)  {
         fPlatformFileSearchPaths = (char**) realloc (fPlatformFileSearchPaths, sizeof (char*) * (i + 1));
         fPlatformFileSearchPaths[i] = strdup (p);
@@ -73,17 +78,39 @@ void TPreferences::MSetPlatformFileSeachPaths (char* arg)
     }
     fPlatformFileSearchPaths = (char**) realloc (fPlatformFileSearchPaths, sizeof (char*) * (i + 1));
     fPlatformFileSearchPaths[i] = NULL;
+    free (copy);
+}
+
+void TPreferences::MPrintUsage (const char* progName)
+{
+    printf ("Usage: %s [options] <file>\n", progName);
+    printf ("Options:\n");
+    printf ("  -c         compile-only\n");
+    printf ("  -d         dump contents of a .pkg file\n");
+    printf ("  -h, --help print this help message\n");
+    printf ("  -l <file>  log file name (default: %s)\n", kDefaultLogFileName);
+    printf ("  -p <dev>   serial port device path (default: %s)\n", kDefaultPort);
+    printf ("  -P <path>  platform files search path (colon-separated)\n");
+    printf ("  -s <speed> serial port speed (default: %d)\n", kDefaultSpeed);
+    printf ("  -t <port>  tcp connection port\n");
 }
 
 void TPreferences::MInitPreferences (int argc, char *argv[])
 {
     char opt;
 
+    for (int i = 1; i < argc; i++) {
+        if (strcmp (argv[i], "--help") == 0) {
+            fHelp = true;
+            return;
+        }
+    }
+
     MReadRcFile ();
     while ((opt = getopt (argc, argv, kOptions)) != -1) {
         switch (opt) {
             case 'p':
-                delete fPort;
+                free (fPort);
                 fPort = strdup (optarg);
                 fConnectionType = kSerial;
                 break;
@@ -98,7 +125,7 @@ void TPreferences::MInitPreferences (int argc, char *argv[])
                 MSetPlatformFileSeachPaths (optarg);
                 break;
             case 'l':
-                delete fLogFileName;
+                free (fLogFileName);
                 fLogFileName = strdup (optarg);
                 break;
             case 'c':
@@ -107,6 +134,12 @@ void TPreferences::MInitPreferences (int argc, char *argv[])
             case 'd':
                 fDumpPackage = true;
                 break;
+            case 'h':
+                fHelp = true;
+                return;
+            default:
+                fHelp = true;
+                return;
         }
     }
     if (optind < argc) {

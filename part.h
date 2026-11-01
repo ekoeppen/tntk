@@ -30,7 +30,7 @@ public:
     newtRefVar                  fRelocations;
     int                         fBaseAddress;
 
-                                TPart (newtRefVar partInfo);
+                                TPart (newtRefVar partInfo, const char* projectDir = NULL);
                                 ~TPart ();
 
     void                        MBuildPart (const char* platformFileName);

@@ -26,7 +26,7 @@ public:
                                 TTntkBase (int argc, char* argv[]);
     virtual                     ~TTntkBase ();
 
-    virtual void                MRun ();
+    virtual int                 MRun ();
 };
 
 #ifdef HAVE_DCL
@@ -39,7 +39,7 @@ public:
                                 TTntk (int argc, char* argv[]);
                                 ~TTntk ();
 
-    void                        MRun ();
+    int                         MRun ();
     void                        MCommandLoop (TDCLServer *server, TDCLLink *link);
     void                        MSendCode (char *command, TDCLLink *link);
     void                        MHandleCommand (char *command, TDCLLink *link);

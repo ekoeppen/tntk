@@ -20,6 +20,7 @@ public:
     char*                       fProjectFileName;
     bool                        fCompileOnly;
     bool                        fDumpPackage;
+    bool                        fHelp;
     
                                 TPreferences ();
                                 ~TPreferences ();
@@ -27,6 +28,7 @@ public:
     void                        MReadRcFile ();
     void                        MSetPlatformFileSeachPaths (char* arg);
     void                        MInitPreferences (int argc, char *argv[]);
+    void                        MPrintUsage (const char* progName);
 };
 
 #endif

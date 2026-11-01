@@ -13,7 +13,7 @@
 //
 // The Original Code is newtpackage.cpp.
 //
-// The Initial Developer of the Original Code is Eckhart K�ppen.
+// The Initial Developer of the Original Code is Eckhart Köppen.
 // Copyright (C) 2004 the Initial Developer. All Rights Reserved.
 //
 // ***** END LICENSE BLOCK *****
@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <ctype.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -63,12 +64,36 @@ const char *kDefaultName = "Test";
 const char *kDefaultOutput = "test.pkg";
 const char *kOptions = "m:o:n:p:";
 
+static char* GetDirName(const char* path)
+{
+    if (path == NULL) return NULL;
+    const char* lastSlash = strrchr(path, '/');
+#ifdef _WIN32
+    const char* lastBackslash = strrchr(path, '\\');
+    if (lastBackslash != NULL && (lastSlash == NULL || lastBackslash > lastSlash)) {
+        lastSlash = lastBackslash;
+    }
+#endif
+    if (lastSlash == NULL) {
+        return strdup(".");
+    }
+    if (lastSlash == path) {
+        return strdup("/");
+    }
+    size_t len = lastSlash - path;
+    char* dir = (char*) malloc(len + 1);
+    strncpy(dir, path, len);
+    dir[len] = '\0';
+    return dir;
+}
+
 TPackage::TPackage (TPreferences* preferences):
     fPreferences(preferences),
     fPackageName (NULL),
     fOutputFileName (NULL),
     fPlatformFileName (NULL),
     fCopyright(NULL),
+    fProjectDir(NULL),
     fPackageData (NULL),
     fPackageDataLen (0),
     fParts (NULL),
@@ -83,21 +108,24 @@ TPackage::~TPackage ()
 
 void TPackage::MReset ()
 {
-    delete fPackageName;
-    delete fOutputFileName;
-    delete fPlatformFileName;
-    delete fPackageData;
-    delete fCopyright;
+    free (fPackageName);
+    free (fOutputFileName);
+    free (fPlatformFileName);
+    free (fPackageData);
+    free (fCopyright);
+    free (fProjectDir);
 
     fPackageName = NULL;
     fOutputFileName = NULL;
     fPlatformFileName = NULL;
     fPackageData = NULL;
+    fCopyright = NULL;
+    fProjectDir = NULL;
     fPackageDataLen = 0;
     while (fNumParts-- > 0) {
         delete fParts[fNumParts];
     }
-    delete fParts;
+    free (fParts);
     fParts = NULL;
     fNumParts = 0;
 }
@@ -108,10 +136,22 @@ newtRef TPackage::MInterpretFile (const char *f)
     uint32_t numStree = 0;
     newtRefVar fn = kNewtRefNIL;
     newtErr err;
-    newtRefVar map, s, v;
-    int i;
+    struct stat st;
+
+    if (f == NULL) {
+        fprintf (stderr, "Error: no file specified\n");
+        exit (1);
+    }
+    if (stat (f, &st) != 0) {
+        fprintf (stderr, "Error: file %s not found\n", f);
+        exit (1);
+    }
 
     err = NPSParseFile (f, &stree, &numStree);
+    if (err != kNErrNone) {
+        fprintf (stderr, "Error parsing file %s\n", f);
+        exit (1);
+    }
     NBCInit ();
     fn = NBCGenBC (stree, numStree, true);
     NBCCleanup ();
@@ -140,7 +180,7 @@ void TPackage::MBuildPackage ()
     parts = NewtMakeArray(kNewtRefNIL, fNumParts);
     package = NcMakeFrame();
     for (i = 0; i < fNumParts; i++) {
-        printf("Encoding Part %d %x...\n", i, fParts[i]->fMainForm);
+        printf("Encoding Part %d %lx...\n", i, (unsigned long)fParts[i]->fMainForm);
         NewtPrintObject(stdout, fParts[i]->fMainForm);
         part = NcMakeFrame();
         NcSetSlot(part, NSSYM(class), NSSYM(PackagePart));
@@ -175,32 +215,65 @@ void TPackage::MReadProjectFile ()
     newtRefVar project, p, copyright, parts;
     char* c;
     char* platformFileName = NULL;
-    int i, n;
+    int i;
 
     MReset ();
     printf ("Reading project file %s\n", fPreferences->fProjectFileName);
     project = MInterpretFile (fPreferences->fProjectFileName);
+    fProjectDir = GetDirName (fPreferences->fProjectFileName);
     p = NcGetSlot (project, NewtMakeSymbol ("platform"));
     if (p != kNewtRefNIL) {
         platformFileName = strdup (NewtRefToString (p));
         printf ("Reading platform file %s\n", platformFileName);
         fPlatformFileName = (char *) malloc(PATH_MAX);
-        if (platformFileName[0] == '/') {
-            strcpy(fPlatformFileName, platformFileName);
+        if (platformFileName[0] == '/'
+#ifdef _WIN32
+            || (isalpha((unsigned char)platformFileName[0]) && platformFileName[1] == ':') || platformFileName[0] == '\\'
+#endif
+        ) {
+            struct stat s;
+            if (stat (platformFileName, &s) == 0) {
+                strncpy (fPlatformFileName, platformFileName, PATH_MAX);
+                fPlatformFileName[PATH_MAX - 1] = '\0';
+            } else {
+                fprintf (stderr, "Platform file %s not found, aborting\n", platformFileName);
+                free (platformFileName);
+                exit (1);
+            }
         } else {
-            for (char** path = fPreferences->fPlatformFileSearchPaths; *path != NULL; path++) {
-                struct stat s;
-                strcpy(fPlatformFileName, *path);
-                strcat(fPlatformFileName, "/");
-                strcat(fPlatformFileName, platformFileName);
-                if (stat(fPlatformFileName, &s) == 0) {
-                    break;
-                } else {
-                    printf ("Platform file %s not found, aborting", platformFileName);
-                    exit (1);
+            bool found = false;
+            if (fPreferences->fPlatformFileSearchPaths != NULL) {
+                for (char** path = fPreferences->fPlatformFileSearchPaths; *path != NULL; path++) {
+                    struct stat s;
+                    snprintf (fPlatformFileName, PATH_MAX, "%s/%s", *path, platformFileName);
+                    if (stat (fPlatformFileName, &s) == 0) {
+                        found = true;
+                        break;
+                    }
                 }
             }
+            if (!found && fProjectDir != NULL && strlen (fProjectDir) > 0) {
+                struct stat s;
+                snprintf (fPlatformFileName, PATH_MAX, "%s/%s", fProjectDir, platformFileName);
+                if (stat (fPlatformFileName, &s) == 0) {
+                    found = true;
+                }
+            }
+            if (!found) {
+                struct stat s;
+                if (stat (platformFileName, &s) == 0) {
+                    strncpy (fPlatformFileName, platformFileName, PATH_MAX);
+                    fPlatformFileName[PATH_MAX - 1] = '\0';
+                    found = true;
+                }
+            }
+            if (!found) {
+                fprintf (stderr, "Platform file %s not found, aborting\n", platformFileName);
+                free (platformFileName);
+                exit (1);
+            }
         }
+        free (platformFileName);
     }
     copyright = NcGetSlot (project, NewtMakeSymbol ("copyright"));
     if (NewtRefIsString (copyright)) {
@@ -219,7 +292,7 @@ void TPackage::MReadProjectFile ()
     printf ("Parts: %d\n", fNumParts);
     fParts = (TPart **) malloc (fNumParts * sizeof (TPart *));
     for (i = 0; i < fNumParts; i++) {
-        fParts[i] = new TPart (NewtGetArraySlot (parts, i));
+        fParts[i] = new TPart (NewtGetArraySlot (parts, i), fProjectDir);
     }
 }
 
@@ -228,6 +301,10 @@ void TPackage::MSavePackage ()
     FILE *f;
     
     f = fopen (fOutputFileName, "wb+");
+    if (f == NULL) {
+        fprintf (stderr, "Error: cannot open output file %s for writing\n", fOutputFileName);
+        exit (1);
+    }
     fwrite (fPackageData, fPackageDataLen, 1, f);
     fclose (f);
 }
@@ -238,15 +315,39 @@ void TPackage::MDumpPackage ()
     struct stat st;
     newtRef r;
 
+    if (fPreferences->fProjectFileName == NULL) {
+        fprintf (stderr, "Error: no package file specified\n");
+        exit (1);
+    }
+    if (stat (fPreferences->fProjectFileName, &st) != 0) {
+        fprintf (stderr, "Error: package file %s not found\n", fPreferences->fProjectFileName);
+        exit (1);
+    }
+    f = fopen (fPreferences->fProjectFileName, "rb");
+    if (f == NULL) {
+        fprintf (stderr, "Error: cannot open package file %s\n", fPreferences->fProjectFileName);
+        exit (1);
+    }
+    fPackageDataLen = st.st_size;
+    fPackageData = (unsigned char *) malloc (fPackageDataLen);
+    if (fPackageData == NULL && fPackageDataLen > 0) {
+        fprintf (stderr, "Error: out of memory reading %s\n", fPreferences->fProjectFileName);
+        fclose (f);
+        exit (1);
+    }
+    if (fread (fPackageData, fPackageDataLen, 1, f) != 1 && fPackageDataLen > 0) {
+        fprintf (stderr, "Error reading package data from %s\n", fPreferences->fProjectFileName);
+        fclose (f);
+        free (fPackageData);
+        exit (1);
+    }
+    fclose (f);
+
     NVMInit ();
     NcSetGlobalVar (NSSYM0 (printDepth), NewtMakeInt32(9999));
     NcSetGlobalVar (NSSYM0 (printLength), NewtMakeInt32(9999));
-    stat (fPreferences->fProjectFileName, &st);
-    f = fopen (fPreferences->fProjectFileName, "rb");
-    fPackageDataLen = st.st_size;
-    fPackageData = (unsigned char *) malloc (fPackageDataLen);
-    fread (fPackageData, fPackageDataLen, 1, f);
     r = NewtReadPkg (fPackageData, fPackageDataLen);
     NewtPrintObj (stdout, r);
-    fclose (f);
+    free (fPackageData);
+    fPackageData = NULL;
 }
