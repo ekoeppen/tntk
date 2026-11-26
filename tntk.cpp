@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <cstring>
+#include <memory>
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #else
@@ -20,6 +22,7 @@
 #include <DCL/Link/Inspector_Commands/TDCLInspectorCmdDeletePkg.h>
 #endif
 
+#define requires newt_requires
 extern "C" {
 #include <NewtCore.h>
 #include <NewtVM.h>
@@ -28,6 +31,7 @@ extern "C" {
 #include <NewtNSOF.h>
 #include <NewtPrint.h>
 }
+#undef requires
 
 #include "tntk.h"
 #include "package.h"
@@ -89,11 +93,9 @@ TTntk::TTntk (int argc, char* argv[]):
     TTntkBase (argc, argv),
     TDCLLogApplication (NULL),
     fDisconnect (false),
-    fConnected (NULL)
+    fConnected (false)
 {
     if (!fPreferences->fHelp && !fPreferences->fCompileOnly && !fPreferences->fDumpPackage && fPreferences->fProjectFileName != NULL) {
-        fConnected = GetThreadsIntf()->CreateSemaphore ();
-        fConnected->Acquire ();
         mLogFile = fopen (fPreferences->fLogFileName, "w+");
     }
 }
@@ -103,9 +105,6 @@ TTntk::~TTntk ()
     if (mLogFile != NULL) {
         fclose (mLogFile);
     }
-    if (fConnected != NULL) {
-        delete fConnected;
-    }
 }
 
 IDCLFiles* TTntk::CreateFilesIntf ()
@@ -113,25 +112,25 @@ IDCLFiles* TTntk::CreateFilesIntf ()
     return new TDCLPOSIXFiles ();
 }
 
-IDCLThreads* TTntk::CreateThreadsIntf ()
-{
-    return new TDCLPThreads ();
-}
-
 void TTntk::ConnectedToNewtonDevice(TDCLLink* inLink, const KUInt16* inName)
 {
     puts ("----> Connected");
-    if (fConnected != NULL) {
-        fConnected->Release ();
+    {
+        std::lock_guard<std::mutex> lock (fConnectedMutex);
+        fConnected = true;
     }
+    fConnectedCV.notify_all ();
 }
 
 void TTntk::Disconnected (TDCLLink* aLink)
 {
     TDCLLogApplication::Disconnected (aLink);
-    if (fConnected != NULL) {
-        fConnected->Release ();
+    {
+        std::lock_guard<std::mutex> lock (fConnectedMutex);
+        fDisconnect = true;
+        fConnected = true;
     }
+    fConnectedCV.notify_all ();
 }
 
 int TTntk::MRun ()
@@ -143,23 +142,16 @@ int TTntk::MRun ()
             fPreferences->MPrintUsage ("tntk");
             return 1;
         }
-        TDCLSimpleServer* server;
-        TDCLSyncCommLayer* comms;
-        TDCLInspectorLink *link;
-
-        comms = new TDCLFDSerialPort (GetThreadsIntf (), fPreferences->fPort);
-        link = new TDCLInspectorLink (this);
-        server = new TDCLSimpleServer (this, comms);
-        server->SetLink (link);
+        auto comms = std::make_unique<TDCLFDSerialPort> (fPreferences->fPort);
+        auto linkPtr = std::make_unique<TDCLInspectorLink> (this);
+        TDCLInspectorLink *link = linkPtr.get ();
+        auto server = std::make_unique<TDCLSimpleServer> (this, std::move (comms), std::move (linkPtr));
         server->Start ();
         puts ("Waiting for connection...");
-        MCommandLoop (server, link);
+        MCommandLoop (server.get (), link);
         puts ("Quitting...");
         server->Stop ();
         link->Disconnect ();
-//    delete link;
-//    delete comms;
-//    delete server;
         return 0;
     }
 }
@@ -223,9 +215,9 @@ void TTntk::MCommandLoop (TDCLServer *server, TDCLLink *link)
     char *command;
     char *s;
 
-    fDisconnect = false;
-    if (fConnected != NULL) {
-        fConnected->Acquire ();
+    {
+        std::unique_lock<std::mutex> lock (fConnectedMutex);
+        fConnectedCV.wait (lock, [this] { return fConnected; });
     }
     while (!fDisconnect) {
 #ifdef HAVE_LIBREADLINE
@@ -244,9 +236,6 @@ void TTntk::MCommandLoop (TDCLServer *server, TDCLLink *link)
             MSendCode (s, link);
         }
         free (command);
-    }
-    if (fConnected != NULL) {
-        fConnected->Release ();
     }
 }
 #endif

@@ -4,12 +4,17 @@
 // POSIX
 #include <stdio.h>
 
+// C++
+#ifdef HAVE_DCL
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#endif
+
 // DCL
 #ifdef HAVE_DCL
 #include <DCL/Interfaces/Common/TDCLLogApplication.h>
 #include <DCL/Interfaces/POSIX/TDCLPOSIXFiles.h>
-#include <DCL/Interfaces/POSIX/TDCLPThreads.h>
-#include <DCL/Interfaces/IDCLThreads.h>
 #include <DCL/Server/TDCLSimpleServer.h>
 #include <DCL/Link/TDCLInspectorLink.h>
 #endif
@@ -33,8 +38,10 @@ public:
 class TTntk: public TDCLLogApplication, public TTntkBase
 {
 public:
-    bool                        fDisconnect;
-    IDCLThreads::ISemaphore*    fConnected;
+    std::atomic<bool>           fDisconnect;
+    bool                        fConnected;
+    std::mutex                  fConnectedMutex;
+    std::condition_variable     fConnectedCV;
 
                                 TTntk (int argc, char* argv[]);
                                 ~TTntk ();
@@ -48,7 +55,6 @@ public:
     virtual void                ConnectedToNewtonDevice(TDCLLink* inLink, const KUInt16* inName);
     virtual void                Disconnected(TDCLLink* inLink);
     IDCLFiles*                  CreateFilesIntf ();
-    IDCLThreads*                CreateThreadsIntf ();
 };
 #endif
 

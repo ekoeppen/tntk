@@ -36,6 +36,7 @@
 #endif
 
 // NEWT/0
+#define requires newt_requires
 extern "C" {
 #include <NewtCore.h>
 #include <NewtVM.h>
@@ -46,6 +47,7 @@ extern "C" {
 #include <NewtPkg.h>
 #include <NewtPrint.h>
 }
+#undef requires
 
 #include "part.h"
 #include "NewtType.h"

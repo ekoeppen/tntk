@@ -1,6 +1,10 @@
 cmake_minimum_required (VERSION 3.31)
 project (tntk)
-option(USE_DCL "Use DCL when found" ON)
+if (WIN32)
+    option(USE_DCL "Use DCL when found" OFF)
+else()
+    option(USE_DCL "Use DCL when found" ON)
+endif()
 add_executable (tntk
 package.cpp
 part.cpp
@@ -33,17 +37,18 @@ endif()
 target_include_directories(tntk PUBLIC ${newt0_SOURCE_DIR}/src/newt_core/incs)
 
 find_library(READLINE_LIBRARY NAMES readline)
-if (USE_DCL)
-	find_library(DCL_LIBRARY NAMES DCL)
-endif (USE_DCL)
+if (USE_DCL AND NOT WIN32)
+	FetchContent_Declare(
+		cdcl
+		GIT_REPOSITORY https://github.com/ekoeppen/cDCL.git
+		GIT_TAG        3.2.2
+	)
+	FetchContent_MakeAvailable(cdcl)
+	add_definitions (-DHAVE_DCL)
+	target_link_libraries (tntk cDCL::DCL)
+endif ()
 
 target_link_libraries (tntk libnewt)
-
-if (DCL_LIBRARY)
-	add_definitions (-DHAVE_DCL)
-	target_link_libraries (tntk ${DCL_LIBRARY})
-    target_include_directories(tntk PUBLIC /usr/local/include)
-endif (DCL_LIBRARY)
 
 if (READLINE_LIBRARY)
 	add_definitions (-DHAVE_READLINE)
