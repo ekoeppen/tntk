@@ -1,7 +1,9 @@
 #ifndef __TPACKAGE_H
 #define __TPACKAGE_H
 
+#define requires newt_requires
 #include <NewtCore.h>
+#undef requires
 #include "part.h"
 #include "preferences.h"
 

@@ -1,7 +1,9 @@
 #ifndef __TPART_H
 #define __TPART_H
 
+#define requires newt_requires
 #include <NewtCore.h>
+#undef requires
 
 enum TPartType
 {
